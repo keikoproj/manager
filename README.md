@@ -15,7 +15,7 @@ This project is in initial stage and actively being worked on. Apart from what i
 
 ### High Level Design
 
-![Design](docs/images/keiko-manager.jpeg)
+![High_Design](docs/images/keiko-manager.jpeg)
 
 ## ❤ Contributing ❤
 
