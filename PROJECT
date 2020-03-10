@@ -1,0 +1,10 @@
+version: "2"
+domain: keikoproj.io
+repo: github.com/keikoproj/manager
+resources:
+- group: manager
+  version: v1alpha1
+  kind: Cluster
+- group: manager
+  version: v1alpha1
+  kind: Namespace
