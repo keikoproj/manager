@@ -1,0 +1,7 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: Namespace
+metadata:
+  name: namespace-sample
+spec:
+  # Add fields here
+  foo: bar

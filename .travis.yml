@@ -1,0 +1,42 @@
+language: go
+
+go:
+  - 1.12.x
+
+git:
+  depth: 1
+
+env:
+  global:
+    - GO111MODULE=on
+
+cache:
+  directories:
+    - $HOME/.local
+    - $HOME/.kube
+
+before_install: skip
+
+install:
+  # install kube builder so BDD test cases can work
+  - wget https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.2.0/kubebuilder_2.2.0_linux_amd64.tar.gz
+  - tar -zxvf  kubebuilder_2.2.0_linux_amd64.tar.gz
+  - sudo mv kubebuilder_2.2.0_linux_amd64 /usr/local/kubebuilder
+
+jobs:
+  include:
+
+    - stage: unit-test
+      if: type IN (push, pull_request)
+      script:
+        - make test
+        - bash <(curl -s https://codecov.io/bash)
+        - make docker-build
+
+    - stage: publish-image
+      if: type IN (push)
+      script:
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - if [ $TRAVIS_EVENT_TYPE = push ]; then export IMG=keikoproj/manager:$TRAVIS_BRANCH; fi
+        - make docker-build
+        - make docker-push
