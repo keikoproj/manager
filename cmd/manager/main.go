@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/keikoproj/manager/cli/manager/commands"
+	"github.com/keikoproj/manager/cmd/manager/commands"
 	"github.com/prometheus/common/log"
 )
 
