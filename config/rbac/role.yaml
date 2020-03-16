@@ -11,38 +11,38 @@ rules:
   resources:
   - clusters
   verbs:
+  - create
+  - delete
   - get
   - list
-  - watch
-  - create
-  - update
   - patch
-  - delete
+  - update
+  - watch
 - apiGroups:
   - manager.keikoproj.io
   resources:
   - clusters/status
   verbs:
   - get
-  - update
   - patch
+  - update
 - apiGroups:
   - manager.keikoproj.io
   resources:
   - namespaces
   verbs:
+  - create
+  - delete
   - get
   - list
-  - watch
-  - create
-  - update
   - patch
-  - delete
+  - update
+  - watch
 - apiGroups:
   - manager.keikoproj.io
   resources:
   - namespaces/status
   verbs:
   - get
-  - update
   - patch
+  - update
