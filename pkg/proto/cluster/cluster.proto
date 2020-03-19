@@ -1,0 +1,86 @@
+syntax = "proto3";
+package cluster;
+
+option go_package = "pkg/proto/cluster";
+
+
+message Cluster {
+    //Name contains cluster name
+    string name = 1;
+    //Type contains kubernetes cluster installation type. ex: AWS, GCP
+    string cloud = 2;
+    //Config contains info to connect to the target cluster
+    //This is same as config struct in https://github.com/kubernetes/client-go/blob/master/rest/config.go
+    // but have to define it again here with whatever we need
+    Config config = 3;
+}
+
+// Config holds the common attributes that can be passed to a Kubernetes client on
+// initialization.
+// +optional
+message Config {
+    // Host must be a host string, a host:port pair, or a URL to the base of the apiserver.
+    // If a URL is given then the (optional) Path of that URL represents a prefix that must
+    // be appended to all request URIs used to access the apiserver. This allows a frontend
+    // proxy to easily relocate all of the apiserver endpoints.
+    string host = 1;
+    // Server requires Basic authentication
+
+    string username = 2;
+    // password contains basic auth password
+    string password = 3;
+
+    // Server requires Bearer authentication. This client will not attempt to use
+    // refresh tokens for an OAuth2 flow.
+    // TODO: demonstrate an OAuth2 compatible client.
+    string bearerToken = 4;
+
+
+    TLSClientConfig tlsClientConfig = 6;
+
+}
+
+// TLSClientConfig contains settings to enable transport layer security
+message TLSClientConfig {
+    // Server should be accessed without verifying the TLS certificate. For testing only.
+    bool inSecure = 1;
+
+    // ServerName is passed to the server for SNI and is used in the client to check server
+    // ceritificates against. If ServerName is empty, the hostname used to contact the
+    // server is used.
+    string serverName = 2;
+
+    // CertData holds PEM-encoded bytes (typically read from a client certificate file).
+    // CertData takes precedence over CertFile
+   bytes certData = 3;
+
+    // KeyData holds PEM-encoded bytes (typically read from a client certificate key file).
+    // KeyData takes precedence over KeyFile
+    bytes keyData = 4;
+
+    // CAData holds PEM-encoded bytes (typically read from a root certificates bundle).
+    // CAData takes precedence over CAFile
+    bytes caData = 5;
+
+    // NextProtos is a list of supported application level protocols, in order of preference.
+    // Used to populate tls.Config.NextProtos.
+    // To indicate to the server http/1.1 is preferred over http/2, set to ["http/1.1", "h2"] (though the server is free to ignore that preference).
+    // To use only http/1.1, set to ["http/1.1"].
+    repeated string nextProtos = 6;
+
+}
+
+message RegisterClusterRequest {
+
+}
+
+message RegisterClusterResponse {
+
+}
+
+
+service ClusterService {
+    rpc RegisterCluster(Cluster) returns (Cluster){
+
+    }
+}

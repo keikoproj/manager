@@ -32,7 +32,88 @@ spec:
         metadata:
           type: object
         spec:
-          description: ClusterSpec defines the desired state of Cluster
+          properties:
+            config:
+              description: Config contains info to connect to the target cluster This
+                is same as config struct in https://github.com/kubernetes/client-go/blob/master/rest/config.go
+                but have to define it again here with whatever we need
+              properties:
+                bearerToken:
+                  description: 'Server requires Bearer authentication. This client
+                    will not attempt to use refresh tokens for an OAuth2 flow. TODO:
+                    demonstrate an OAuth2 compatible client.'
+                  type: string
+                bearerTokenSecret:
+                  description: Secret containing a BearerToken. If set, The last successfully
+                    read value takes precedence over BearerToken.
+                  type: string
+                host:
+                  description: Host must be a host string, a host:port pair, or a
+                    URL to the base of the apiserver. If a URL is given then the (optional)
+                    Path of that URL represents a prefix that must be appended to
+                    all request URIs used to access the apiserver. This allows a frontend
+                    proxy to easily relocate all of the apiserver endpoints.
+                  type: string
+                password:
+                  description: password contains basic auth password
+                  type: string
+                tlsClientConfig:
+                  description: TLSClientConfig contains settings to enable transport
+                    layer security
+                  properties:
+                    caData:
+                      description: CAData holds PEM-encoded bytes (typically read
+                        from a root certificates bundle). CAData takes precedence
+                        over CAFile
+                      format: byte
+                      type: string
+                    certData:
+                      description: CertData holds PEM-encoded bytes (typically read
+                        from a client certificate file). CertData takes precedence
+                        over CertFile
+                      format: byte
+                      type: string
+                    inSecure:
+                      description: Server should be accessed without verifying the
+                        TLS certificate. For testing only.
+                      type: boolean
+                    keyData:
+                      description: KeyData holds PEM-encoded bytes (typically read
+                        from a client certificate key file). KeyData takes precedence
+                        over KeyFile
+                      format: byte
+                      type: string
+                    nextProtos:
+                      description: NextProtos is a list of supported application level
+                        protocols, in order of preference. Used to populate tls.Config.NextProtos.
+                        To indicate to the server http/1.1 is preferred over http/2,
+                        set to ["http/1.1", "h2"] (though the server is free to ignore
+                        that preference). To use only http/1.1, set to ["http/1.1"].
+                      items:
+                        type: string
+                      type: array
+                    serverName:
+                      description: ServerName is passed to the server for SNI and
+                        is used in the client to check server ceritificates against.
+                        If ServerName is empty, the hostname used to contact the server
+                        is used.
+                      type: string
+                  type: object
+                username:
+                  description: Server requires Basic authentication
+                  type: string
+              required:
+              - host
+              type: object
+            name:
+              description: Name contains cluster name
+              type: string
+            type:
+              description: 'Type contains kubernetes cluster installation type. ex:
+                AWS, GCP'
+              type: string
+          required:
+          - name
           type: object
         status:
           description: ClusterStatus defines the observed state of Cluster

@@ -24,6 +24,18 @@ func New(debug ...bool) {
 	}))
 }
 
+func NewGenericLogger(debug ...bool) logr.Logger{
+	enabled := false
+	if len(debug) == 0 {
+		enabled = true
+	} else {
+		enabled = debug[0]
+	}
+	return zap.New(func(o *zap.Options) {
+		o.Development = enabled
+	})
+}
+
 //Logger with
 func Logger(ctx context.Context, names ...string) logr.Logger {
 	logk := ctrl.Log.Logger

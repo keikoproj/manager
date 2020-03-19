@@ -5,17 +5,13 @@ import (
 	"fmt"
 	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/internal/utils"
-	"github.com/keikoproj/manager/pkg/grpc"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/spf13/cobra"
 	"k8s.io/api/rbac/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os"
-
-	pb "github.com/keikoproj/manager/pkg/proto/cluster"
 )
 
 // NewClusterCommand returns a new instance of an `manager cluster` command
@@ -57,36 +53,15 @@ func NewClusterRegisterCommand() *cobra.Command {
 		Example: "manager cluster register -c admins@iksm-ppd-usw2-k8s",
 		Run: func(c *cobra.Command, args []string) {
 			ctx := context.Background()
-			conf := getManagedClusterKubeConfig(configContext)
-			clientSet, err := kubernetes.NewForConfig(conf)
-			utils.StopIfError(err)
+			clientSet := getManagedClusterKubeConfig(configContext)
 			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
 			if serviceAccount == "" {
 				createRBACInManagedCluster(ctx, managedClusterClient)
 				serviceAccount = common.ManagerServiceAccountName
 			}
-			token, err := managedClusterClient.GetServiceAccountTokenSecret(ctx, serviceAccount, common.SystemNameSpace)
+			_, err := managedClusterClient.GetServiceAccountTokenSecret(ctx, serviceAccount, common.SystemNameSpace)
 			utils.StopIfError(err)
 			fmt.Printf("token received successfully\n")
-			//Create cluster request
-			 cl := &pb.Cluster{
-			 	Name: "something",
-			 	Cloud: "AWS",
-			 	Config: &pb.Config{
-			 		Host: conf.Host,
-			 		BearerToken: token,
-			 		TlsClientConfig: &pb.TLSClientConfig{
-			 			CaData: conf.CAData,
-			 			ServerName: conf.ServerName,
-			 			InSecure: conf.Insecure,
-					},
-				},
-			 }
-			//Call Server
-			resp, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().RegisterCluster(ctx, cl)
-			utils.StopIfError(err)
-			fmt.Printf("grpc call made\n")
-			fmt.Printf("%v\n", resp)
 		},
 	}
 
@@ -114,8 +89,7 @@ func NewClusterUnregisterCommand() *cobra.Command {
 		Run: func(c *cobra.Command, args []string) {
 
 			ctx := context.Background()
-			clientSet, err := kubernetes.NewForConfig(getManagedClusterKubeConfig(configContext))
-			utils.StopIfError(err)
+			clientSet := getManagedClusterKubeConfig(configContext)
 			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
 			removeRBACInManagedCluster(ctx, managedClusterClient)
 		},
@@ -126,7 +100,7 @@ func NewClusterUnregisterCommand() *cobra.Command {
 	return command
 }
 
-func getManagedClusterKubeConfig(contextName string) *rest.Config {
+func getManagedClusterKubeConfig(contextName string) *kubernetes.Clientset {
 
 	configAccess := clientcmd.NewDefaultPathOptions()
 	config, err := configAccess.GetStartingConfig()
@@ -143,7 +117,9 @@ func getManagedClusterKubeConfig(contextName string) *rest.Config {
 	conf, err := clientConfig.ClientConfig()
 	utils.StopIfError(err)
 
-	return conf
+	clientset, err := kubernetes.NewForConfig(conf)
+	utils.StopIfError(err)
+	return clientset
 }
 
 func createRBACInManagedCluster(ctx context.Context, client *k8s.Client) {

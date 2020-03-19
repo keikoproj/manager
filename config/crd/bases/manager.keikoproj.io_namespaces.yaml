@@ -32,7 +32,6 @@ spec:
         metadata:
           type: object
         spec:
-          description: NamespaceSpec defines the desired state of Namespace
           type: object
         status:
           description: NamespaceStatus defines the observed state of Namespace

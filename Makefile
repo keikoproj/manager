@@ -11,7 +11,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+
+all: manager proto
 
 # Run tests
 test: generate fmt vet manifests
@@ -67,3 +68,18 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+proto-gen-tools:
+ifeq (, $(shell which protoc-gen-go))
+	brew install protobuf
+	go get -u github.com/golang/protobuf/protoc-gen-go
+PROTO_GEN=$(GOBIN)/protoc-gen-go
+PROTO_COMPILER=$(shell which protoc)
+else
+PROTO_GEN=$(shell which protoc-gen-go)
+endif
+
+proto: proto-gen-tools
+	@echo "Generating protogen files:"
+ 	$(shell protoc --go_out=paths=source_relative,plugins=grpc:. pkg/proto/cluster/cluster.proto)
+

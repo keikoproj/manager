@@ -23,9 +23,79 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ClusterSpec defines the desired state of Cluster
+
 type ClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	//Name contains cluster name
+	Name string `json:"name"`
+	//Type contains kubernetes cluster installation type. ex: AWS, GCP
+	// +optional
+	Cloud string `json:"type,omitempty"`
+
+	//Config contains info to connect to the target cluster
+	//This is same as config struct in https://github.com/kubernetes/client-go/blob/master/rest/config.go
+	// but have to define it again here with whatever we need
+	// +optional
+	Config Config `json:"config,omitempty"`
+}
+
+// Config holds the common attributes that can be passed to a Kubernetes client on
+// initialization.
+// +optional
+type Config struct {
+	// Host must be a host string, a host:port pair, or a URL to the base of the apiserver.
+	// If a URL is given then the (optional) Path of that URL represents a prefix that must
+	// be appended to all request URIs used to access the apiserver. This allows a frontend
+	// proxy to easily relocate all of the apiserver endpoints.
+	Host string `json:"host"`
+
+	// Server requires Basic authentication
+	// +optional
+	Username string `json:"username,omitempty"`
+	// password contains basic auth password
+	// +optional
+	Password string `json:"password,omitempty"`
+
+	// Secret containing a BearerToken.
+	// If set, The last successfully read value takes precedence over BearerToken.
+	// +optional
+	BearerTokenSecret string `json:"bearerTokenSecret,omitempty"`
+
+	// TLSClientConfig contains settings to enable transport layer security
+	// +optional
+	TLSClientConfig `json:"tlsClientConfig,omitempty"`
+}
+
+// TLSClientConfig contains settings to enable transport layer security
+// +optional
+type TLSClientConfig struct {
+	// Server should be accessed without verifying the TLS certificate. For testing only.
+	// +optional
+	Insecure bool `json:"inSecure,omitempty"`
+	// ServerName is passed to the server for SNI and is used in the client to check server
+	// ceritificates against. If ServerName is empty, the hostname used to contact the
+	// server is used.
+	// +optional
+	ServerName string `json:"serverName,omitempty"`
+
+	// CertData holds PEM-encoded bytes (typically read from a client certificate file).
+	// CertData takes precedence over CertFile
+	// +optional
+	CertData []byte `json:"certData,omitempty"`
+	// KeyData holds PEM-encoded bytes (typically read from a client certificate key file).
+	// KeyData takes precedence over KeyFile
+	// +optional
+	KeyData []byte `json:"keyData,omitempty"`
+	// CAData holds PEM-encoded bytes (typically read from a root certificates bundle).
+	// CAData takes precedence over CAFile
+	// +optional
+	CAData []byte `json:"caData,omitempty"`
+
+	// NextProtos is a list of supported application level protocols, in order of preference.
+	// Used to populate tls.Config.NextProtos.
+	// To indicate to the server http/1.1 is preferred over http/2, set to ["http/1.1", "h2"] (though the server is free to ignore that preference).
+	// To use only http/1.1, set to ["http/1.1"].
+	// +optional
+	NextProtos []string `json:"nextProtos,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

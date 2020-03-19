@@ -6,8 +6,8 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-//Iface defines required functions to be implemented by receivers
-type Iface interface {
+//Interface defines required functions to be implemented by receivers
+type Interface interface {
 	SetUpEventHandler(ctx context.Context) record.EventRecorder
 	GetConfigMap(ctx context.Context, ns string, name string) *v1.ConfigMap
 	CreateServiceAccount(ctx context.Context, saName string, ns string) error
