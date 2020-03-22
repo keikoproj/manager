@@ -13,7 +13,7 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 
-all: manager proto
+all: manager
 
 # Run tests
 test: generate fmt vet manifests
@@ -54,8 +54,6 @@ vet:
 
 # Generate code
 generate: controller-gen
-	$(shell rm -rf pkg/k8s/customclient)
-	$(CLIENT_GEN) -h ./hack/boilerplate.go.txt -n customclient --input-base github.com/keikoproj/manager/api --input custom/v1alpha1 -p github.com/keikoproj/manager/pkg/k8s --fake-clientset=false
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 
@@ -79,9 +77,10 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+.PHONY: client-gen-tools
 # find or download client-gen
 # download client-gen if necessary
-client-gen:
+client-gen-tools:
 ifeq (, $(shell which client-gen))
 	go get k8s.io/code-generator/cmd/client-gen
 CLIENT_GEN=$(GOBIN)/client-gen
@@ -102,4 +101,9 @@ endif
 proto: proto-gen-tools
 	@echo "Generating protogen files:"
  	$(shell protoc --go_out=paths=source_relative,plugins=grpc:. pkg/proto/cluster/cluster.proto)
+
+.PHONY: clientgen
+clientgen: client-gen-tools
+	$(shell rm -rf pkg/k8s/customclient) \
+    $(CLIENT_GEN) -h ./hack/boilerplate.go.txt -n customclient --input-base github.com/keikoproj/manager/api --input custom/v1alpha1 -p github.com/keikoproj/manager/pkg/k8s --fake-clientset=false
 
