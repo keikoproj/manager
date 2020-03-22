@@ -18,11 +18,11 @@ var (
 )
 
 type grpcClient struct {
-	conn grpc.ClientConn
+	conn *grpc.ClientConn
 }
 
 //NewConnectionOrDie function gets the new grpc client
-func NewConnectionOrDie() *grpcClient{
+func NewConnectionOrDie() *grpcClient {
 	fmt.Println("Request received successfully")
 	var opts []grpc.DialOption
 	if *tls {
@@ -31,7 +31,7 @@ func NewConnectionOrDie() *grpcClient{
 		}
 		creds, err := credentials.NewClientTLSFromFile(*caFile, *serverHostOverride)
 		if err != nil {
-			log.Fatalf( "Failed to create TLS credentials %v \n", err)
+			log.Fatalf("Failed to create TLS credentials %v \n", err)
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
@@ -41,14 +41,14 @@ func NewConnectionOrDie() *grpcClient{
 	opts = append(opts, grpc.WithBlock())
 	conn, err := grpc.Dial(*serverAddr, opts...)
 	if err != nil {
-		log.Fatalf( "fail to create grpc connection %v \n", err)
+		log.Fatalf("fail to create grpc connection %v \n", err)
 	}
 	fmt.Println("Connection Established successfully")
-	return &grpcClient{conn: *conn}
+	return &grpcClient{conn: conn}
 }
 
 //NewClusterClientOrDie function returns cluster client
-func (client *grpcClient)NewClusterClientOrDie() pb.ClusterServiceClient {
+func (client *grpcClient) NewClusterClientOrDie() pb.ClusterServiceClient {
 	fmt.Println("Cluster client created successfully")
-	return pb.NewClusterServiceClient(&client.conn)
+	return pb.NewClusterServiceClient(client.conn)
 }

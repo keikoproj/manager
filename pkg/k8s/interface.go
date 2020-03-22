@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"github.com/keikoproj/manager/api/custom/v1alpha1"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 )
@@ -17,4 +18,9 @@ type Interface interface {
 	CreateOrUpdateClusterRoleBinding(ctx context.Context, name string) error
 	DeleteClusterRoleBinding(ctx context.Context, name string) error
 	GetServiceAccountTokenSecret(ctx context.Context, saName string) (string, error)
+	CreateK8sSecret(ctx context.Context, secret *v1.Secret) error
+
+	CreateNamespace(ctx context.Context, namespace *v1.Namespace) error
+
+	CreateClusterCR(ctx context.Context, cr *v1alpha1.Cluster) error
 }

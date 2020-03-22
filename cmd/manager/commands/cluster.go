@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os"
+	"time"
 
 	pb "github.com/keikoproj/manager/pkg/proto/cluster"
 )
@@ -56,8 +57,9 @@ func NewClusterRegisterCommand() *cobra.Command {
 		Long:    "Add/register managed cluster with manager",
 		Example: "manager cluster register -c admins@iksm-ppd-usw2-k8s",
 		Run: func(c *cobra.Command, args []string) {
-			ctx := context.Background()
-			conf := getManagedClusterKubeConfig(configContext)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			conf, name := getManagedClusterKubeConfig(configContext)
 			clientSet, err := kubernetes.NewForConfig(conf)
 			utils.StopIfError(err)
 			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
@@ -69,24 +71,28 @@ func NewClusterRegisterCommand() *cobra.Command {
 			utils.StopIfError(err)
 			fmt.Printf("token received successfully\n")
 			//Create cluster request
-			 cl := &pb.Cluster{
-			 	Name: "something",
-			 	Cloud: "AWS",
-			 	Config: &pb.Config{
-			 		Host: conf.Host,
-			 		BearerToken: token,
-			 		TlsClientConfig: &pb.TLSClientConfig{
-			 			CaData: conf.CAData,
-			 			ServerName: conf.ServerName,
-			 			InSecure: conf.Insecure,
+			cl := &pb.Cluster{
+				Name:  name,
+				Cloud: "AWS",
+				Config: &pb.Config{
+					Host:        conf.Host,
+					BearerToken: token,
+					TlsClientConfig: &pb.TLSClientConfig{
+						CaData:     conf.CAData,
+						ServerName: conf.ServerName,
+						InSecure:   conf.Insecure,
 					},
 				},
-			 }
+			}
+
+			//If it is self cluster registration change the hostname
+			if self {
+				cl.Config.Host = common.InClusterAPIServerAddr
+			}
 			//Call Server
 			resp, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().RegisterCluster(ctx, cl)
 			utils.StopIfError(err)
-			fmt.Printf("grpc call made\n")
-			fmt.Printf("%v\n", resp)
+			fmt.Printf("Successfully registerd %s cluster", resp.Name)
 		},
 	}
 
@@ -112,12 +118,13 @@ func NewClusterUnregisterCommand() *cobra.Command {
 		Long:    "Remove/unregister managed cluster from manager",
 		Example: "manager cluster unregister -c admins@iksm-ppd-usw2-k8s",
 		Run: func(c *cobra.Command, args []string) {
-
-			ctx := context.Background()
-			clientSet, err := kubernetes.NewForConfig(getManagedClusterKubeConfig(configContext))
+			conf, name := getManagedClusterKubeConfig(configContext)
+			clientSet, err := kubernetes.NewForConfig(conf)
 			utils.StopIfError(err)
+			ctx := context.Background()
 			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
 			removeRBACInManagedCluster(ctx, managedClusterClient)
+			fmt.Printf("Clsuetr %s is removed successfully", name)
 		},
 	}
 
@@ -126,7 +133,7 @@ func NewClusterUnregisterCommand() *cobra.Command {
 	return command
 }
 
-func getManagedClusterKubeConfig(contextName string) *rest.Config {
+func getManagedClusterKubeConfig(contextName string) (*rest.Config, string) {
 
 	configAccess := clientcmd.NewDefaultPathOptions()
 	config, err := configAccess.GetStartingConfig()
@@ -143,7 +150,7 @@ func getManagedClusterKubeConfig(contextName string) *rest.Config {
 	conf, err := clientConfig.ClientConfig()
 	utils.StopIfError(err)
 
-	return conf
+	return conf, clstContext.Cluster
 }
 
 func createRBACInManagedCluster(ctx context.Context, client *k8s.Client) {

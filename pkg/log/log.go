@@ -24,7 +24,7 @@ func New(debug ...bool) {
 	}))
 }
 
-func NewGenericLogger(debug ...bool) logr.Logger{
+func NewGenericLogger(debug ...bool) logr.Logger {
 	enabled := false
 	if len(debug) == 0 {
 		enabled = true

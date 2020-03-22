@@ -105,7 +105,7 @@ type ClusterStatus struct {
 }
 
 // +kubebuilder:object:root=true
-
+// +genclient
 // Cluster is the Schema for the clusters API
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -116,7 +116,6 @@ type Cluster struct {
 }
 
 // +kubebuilder:object:root=true
-
 // ClusterList contains a list of Cluster
 type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`

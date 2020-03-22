@@ -6,6 +6,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/api/rbac/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("K8s_rbac", func() {
@@ -113,7 +116,43 @@ var _ = Describe("K8s_rbac", func() {
 				Expect(err).NotTo(BeNil())
 			})
 		})
+		Context("Create a k8s secret with empty struct", func() {
+			It("Should fail it as it needs secret name", func() {
+				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{}, common.SystemNameSpace)
+				Expect(err).NotTo(BeNil())
+			})
+		})
+		Context("Create a k8s secret with valid name", func() {
+			It("Should be successful", func() {
+				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ops-prim-ppd",
+					},
+				}, common.SystemNameSpace)
+				Expect(err).To(BeNil())
+			})
+		})
 
+		Context("Create a k8s secret with same name again", func() {
+			It("Should be successful", func() {
+				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ops-prim-ppd",
+					},
+				}, common.SystemNameSpace)
+				Expect(err).To(BeNil())
+			})
+		})
+		Context("Create a k8s secret with invalid name", func() {
+			It("Should fail due to invalid naming convention", func() {
+				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ops-prim_ppd",
+					},
+				}, common.SystemNameSpace)
+				Expect(err).NotTo(BeNil())
+			})
+		})
 	})
 
 })

@@ -1,28 +1,29 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	log "github.com/keikoproj/manager/pkg/log"
+	"github.com/keikoproj/manager/pkg/k8s"
+	"github.com/keikoproj/manager/pkg/log"
+	pb "github.com/keikoproj/manager/pkg/proto/cluster"
 	"github.com/keikoproj/manager/server/cluster"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/testdata"
 	"net"
-	pb "github.com/keikoproj/manager/pkg/proto/cluster"
 )
 
 var (
-	tls        = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	certFile   = flag.String("cert_file", "", "The TLS cert file")
-	keyFile    = flag.String("key_file", "", "The TLS key file")
-	port       = flag.Int("port", 10000, "The server port")
+	tls      = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	certFile = flag.String("cert_file", "", "The TLS cert file")
+	keyFile  = flag.String("key_file", "", "The TLS key file")
+	port     = flag.Int("port", 10000, "The server port")
 )
 
-
-
 func main() {
-	log := log.NewGenericLogger()
+	log.New()
+	log := log.Logger(context.Background(), "main")
 
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
@@ -45,9 +46,10 @@ func main() {
 	}
 	grpcServer := grpc.NewServer(opts...)
 
-	pb.RegisterClusterServiceServer(grpcServer, cluster.New())
+	//Lets get k8s client here
+	sClient := k8s.NewK8sSelfClientDoOrDie()
+	pb.RegisterClusterServiceServer(grpcServer, cluster.New(sClient))
 	log.Info("Server is up and running")
 	grpcServer.Serve(lis)
 
 }
-

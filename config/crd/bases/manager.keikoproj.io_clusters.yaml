@@ -38,11 +38,6 @@ spec:
                 is same as config struct in https://github.com/kubernetes/client-go/blob/master/rest/config.go
                 but have to define it again here with whatever we need
               properties:
-                bearerToken:
-                  description: 'Server requires Bearer authentication. This client
-                    will not attempt to use refresh tokens for an OAuth2 flow. TODO:
-                    demonstrate an OAuth2 compatible client.'
-                  type: string
                 bearerTokenSecret:
                   description: Secret containing a BearerToken. If set, The last successfully
                     read value takes precedence over BearerToken.

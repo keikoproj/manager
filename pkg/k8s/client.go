@@ -1,7 +1,7 @@
 package k8s
 
 import (
-	"k8s.io/client-go/dynamic"
+	"github.com/keikoproj/manager/pkg/k8s/customclient"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -9,8 +9,8 @@ import (
 )
 
 type Client struct {
-	cl  kubernetes.Interface
-	dCl dynamic.Interface
+	cl       kubernetes.Interface
+	customCl *customclient.Clientset
 }
 
 //NewK8sSelfClientDoOrDie gets the new k8s go client
@@ -27,14 +27,13 @@ func NewK8sSelfClientDoOrDie() *Client {
 		panic(err)
 	}
 
-	dClient, err := dynamic.NewForConfig(config)
+	custom, err := customclient.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
-
 	cl := &Client{
-		client,
-		dClient,
+		cl:       client,
+		customCl: custom,
 	}
 	return cl
 }
@@ -50,4 +49,8 @@ func NewK8sManagedClusterClientDoOrDie(client *kubernetes.Clientset) *Client {
 
 func (c *Client) ClientInterface() kubernetes.Interface {
 	return c.cl
+}
+
+func (c *Client) CustomClient() *customclient.Clientset {
+	return c.customCl
 }

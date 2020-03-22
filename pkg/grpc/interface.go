@@ -1,11 +1,10 @@
 package grpc
 
 import (
-	"io"
 	pb "github.com/keikoproj/manager/pkg/proto/cluster"
+	"io"
 )
 
-
 type Interface interface {
-	NewClusterClientOrDie()(io.Closer, pb.ClusterServiceClient)
+	NewClusterClientOrDie() (io.Closer, pb.ClusterServiceClient)
 }

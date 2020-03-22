@@ -220,3 +220,24 @@ func (c *Client) GetServiceAccountTokenSecret(ctx context.Context, saName string
 	log.V(1).Info("service account token secret retrieved successfully")
 	return string(token), nil
 }
+
+//CreateK8sSecret function creates secret in specific namespace
+func (c *Client) CreateK8sSecret(ctx context.Context, secret *corev1.Secret, ns string) error {
+
+	log := log.Logger(ctx, "pkg.k8s", "rbac", "CreateK8sSecret")
+	// Create the namespace
+	resp, err := c.cl.CoreV1().Secrets(ns).Create(secret)
+	if err != nil {
+		if !apierr.IsAlreadyExists(err) {
+			msg := fmt.Sprintf("unable to create the secret %s", secret.Name)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
+		log.Info("Namespace already exists", "name", secret.Name)
+		return nil
+	}
+
+	log.Info("Successfully created secret", "name", resp.Name)
+
+	return nil
+}

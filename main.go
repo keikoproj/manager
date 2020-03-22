@@ -19,7 +19,7 @@ import (
 	"flag"
 	"os"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
 	"github.com/keikoproj/manager/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -54,7 +54,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
-		LeaderElection:     enableLeaderElection,
+		LeaderElection:     false,
 		Port:               9443,
 	})
 	if err != nil {

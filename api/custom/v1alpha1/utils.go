@@ -24,9 +24,6 @@ func (c *Config) String() string {
 	if cc.Password != "" {
 		cc.Password = "--- REDACTED ---"
 	}
-	if cc.BearerToken != "" {
-		cc.BearerToken = "--- REDACTED ---"
-	}
 
 	return fmt.Sprintf("%#v", cc)
 }

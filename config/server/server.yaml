@@ -1,34 +1,25 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: system
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: server
   namespace: system
   labels:
-    control-plane: controller-manager
+    app: server
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      app: server
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        app: server
     spec:
       containers:
       - command:
-        - /manager
-        args:
-        - --enable-leader-election
-        image: controller:latest
-        name: manager
+        - /app
+        image: server:latest
+        name: server
         imagePullPolicy: Never
         resources:
           limits:
