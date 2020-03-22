@@ -3,10 +3,10 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"github.com/keikoproj/manager/internal/utils"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
 	pb "github.com/keikoproj/manager/pkg/proto/cluster"
-	"github.com/keikoproj/manager/server/utils"
 	"k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
