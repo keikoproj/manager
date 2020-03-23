@@ -3,11 +3,13 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"os"
+	"strconv"
 )
 
 var (
@@ -15,6 +17,7 @@ var (
 )
 
 type Properties struct {
+	clusterValidationFrequency int
 }
 
 func init() {
@@ -30,23 +33,23 @@ func init() {
 		return
 	}
 
-	//res := k8s.NewK8sClientDoOrDie().GetConfigMap(context.Background(), "", "")
-	//
-	//// load properties into a global variable
-	//err := LoadProperties("", res)
-	//if err != nil {
-	//	log.Error(err, "failed to load properties")
-	//	panic(err)
-	//}
+	res := k8s.NewK8sSelfClientDoOrDie().GetConfigMap(context.Background(), common.ManagerNamespaceName, common.ManagerConfigMapName)
+
+	// load properties into a global variable
+	err := LoadProperties("", res)
+	if err != nil {
+		log.Error(err, "failed to load properties")
+		panic(err)
+	}
 	log.Info("Loaded properties in init func")
 }
 
 func LoadProperties(env string, cm ...*v1.ConfigMap) error {
 	log := log.Logger(context.Background(), "internal.config.properties", "LoadProperties")
-
+	Props = &Properties{}
 	// for local testing
 	if env != "" {
-		Props = &Properties{}
+
 		return nil
 	}
 
@@ -55,12 +58,27 @@ func LoadProperties(env string, cm ...*v1.ConfigMap) error {
 		return fmt.Errorf("config map cannot be nil")
 	}
 
+	ClusterValidationFrequency := cm[0].Data[common.PropertyClusterValidationFrequency]
+	if ClusterValidationFrequency != "" {
+		ClusterValidationFrequency, err := strconv.Atoi(ClusterValidationFrequency)
+		if err != nil {
+			return err
+		}
+		Props.clusterValidationFrequency = ClusterValidationFrequency
+	} else {
+		Props.clusterValidationFrequency = 1800
+	}
+
 	return nil
+}
+
+func (p *Properties) ClusterValidationFrequency() int {
+	return p.clusterValidationFrequency
 }
 
 func RunConfigMapInformer(ctx context.Context) {
 	log := log.Logger(context.Background(), "internal.config.properties", "RunConfigMapInformer")
-	cmInformer := k8s.GetConfigMapInformer(ctx, "", "")
+	cmInformer := k8s.GetConfigMapInformer(ctx, common.ManagerNamespaceName, common.ManagerConfigMapName)
 	cmInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: updateProperties,
 	},

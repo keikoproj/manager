@@ -189,7 +189,7 @@ func (c *Client) GetServiceAccountTokenSecret(ctx context.Context, saName string
 			log.Error(err, "unable to retrieve service account", "serviceAccountName", saName)
 			return false, err
 		}
-
+		log.V(1).Info("Number of secrets", "count", len(sa.Secrets))
 		for _, obj := range sa.Secrets {
 			secret, err = c.cl.CoreV1().Secrets(ns).Get(obj.Name, metav1.GetOptions{})
 			log.Info("secret found", "secret_name", secret.Name)
@@ -225,7 +225,7 @@ func (c *Client) GetServiceAccountTokenSecret(ctx context.Context, saName string
 func (c *Client) CreateK8sSecret(ctx context.Context, secret *corev1.Secret, ns string) error {
 
 	log := log.Logger(ctx, "pkg.k8s", "rbac", "CreateK8sSecret")
-	// Create the namespace
+	// Create the k8s secret
 	resp, err := c.cl.CoreV1().Secrets(ns).Create(secret)
 	if err != nil {
 		if !apierr.IsAlreadyExists(err) {
@@ -240,4 +240,17 @@ func (c *Client) CreateK8sSecret(ctx context.Context, secret *corev1.Secret, ns 
 	log.Info("Successfully created secret", "name", resp.Name)
 
 	return nil
+}
+
+//GetK8sSecret function retrieves the secrets
+func (c *Client) GetK8sSecret(ctx context.Context, name string, ns string) (*corev1.Secret, error) {
+	log := log.Logger(ctx, "pkg.k8s", "rbac", "GetK8sSecret")
+	secret, err := c.cl.CoreV1().Secrets(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err, "unable to retrieve secret", "name", name, "namespace", ns)
+		return nil, err
+	}
+	log.Info("secret found", "secret_name", secret.Name)
+
+	return secret, nil
 }

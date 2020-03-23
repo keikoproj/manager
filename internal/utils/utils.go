@@ -1,9 +1,14 @@
 package utils
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/keikoproj/manager/api/custom/v1alpha1"
+	"github.com/keikoproj/manager/pkg/log"
 	"github.com/keikoproj/manager/pkg/proto/cluster"
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 	"os"
 	"strings"
 
@@ -18,9 +23,9 @@ func StopIfError(err error) {
 	}
 }
 
-//SantitizeName sanitizes the string name based on K8s naming convention.
+//SanitizeName sanitizes the string name based on K8s naming convention.
 //
-func SantitizeName(name string) string {
+func SanitizeName(name string) string {
 	return strings.ReplaceAll(name, ".", "-")
 }
 
@@ -29,15 +34,15 @@ func PrepareClusterRequestFromClusterProto(cl *cluster.Cluster) *v1alpha1.Cluste
 
 	cr := &v1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: SantitizeName(cl.Name),
-			Name:      SantitizeName(cl.Name),
+			Namespace: SanitizeName(cl.Name),
+			Name:      SanitizeName(cl.Name),
 		},
 		Spec: v1alpha1.ClusterSpec{
-			Name:  SantitizeName(cl.Name),
+			Name:  SanitizeName(cl.Name),
 			Cloud: cl.Cloud,
 			Config: v1alpha1.Config{
 				Host:              cl.Config.Host,
-				BearerTokenSecret: fmt.Sprintf("%s-%s", SantitizeName(cl.Name), "secrets"),
+				BearerTokenSecret: fmt.Sprintf("%s-%s", SanitizeName(cl.Name), "secrets"),
 				TLSClientConfig: v1alpha1.TLSClientConfig{
 					Insecure:   cl.Config.TlsClientConfig.InSecure,
 					ServerName: cl.Config.TlsClientConfig.ServerName,
@@ -48,4 +53,27 @@ func PrepareClusterRequestFromClusterProto(cl *cluster.Cluster) *v1alpha1.Cluste
 	}
 
 	return cr
+}
+
+//PrepareK8sRestConfigFromClusterCR
+func PrepareK8sRestConfigFromClusterCR(ctx context.Context, cr *v1alpha1.Cluster, secret *v1.Secret) (*rest.Config, error) {
+	log := log.Logger(ctx, "internal.utils", "PrepareK8sRestConfigFromClusterCR")
+	token, ok := secret.Data[fmt.Sprintf("%s_%s", SanitizeName(cr.Spec.Name), "config")]
+	if !ok {
+		msg := "bearer token doesn't exist"
+		err := errors.New(msg)
+		log.Error(err, msg)
+		return nil, err
+	}
+
+	conf := &rest.Config{
+		Host:        cr.Spec.Config.Host,
+		BearerToken: string(token),
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:     cr.Spec.Config.CAData,
+			ServerName: cr.Spec.Config.ServerName,
+			Insecure:   cr.Spec.Config.Insecure,
+		},
+	}
+	return conf, nil
 }

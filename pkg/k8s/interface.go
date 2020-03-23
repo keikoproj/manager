@@ -19,8 +19,9 @@ type Interface interface {
 	DeleteClusterRoleBinding(ctx context.Context, name string) error
 	GetServiceAccountTokenSecret(ctx context.Context, saName string) (string, error)
 	CreateK8sSecret(ctx context.Context, secret *v1.Secret) error
+	GetK8sSecret(ctx context.Context, name string, ns string) (*v1.Secret, error)
 
 	CreateNamespace(ctx context.Context, namespace *v1.Namespace) error
 
-	CreateClusterCR(ctx context.Context, cr *v1alpha1.Cluster) error
+	CreateOrUpdateClusterCR(ctx context.Context, cr *v1alpha1.Cluster) error
 }

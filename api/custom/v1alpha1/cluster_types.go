@@ -98,14 +98,33 @@ type TLSClientConfig struct {
 	NextProtos []string `json:"nextProtos,omitempty"`
 }
 
+type State string
+
+const (
+	Ready                State = "Ready"
+	Warning              State = "Warning"
+	Error                State = "Error"
+	PolicyNotAllowed     State = "PolicyNotAllowed"
+	RolesMaxLimitReached State = "RolesMaxLimitReached"
+)
+
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	//State of the resource
+	State State `json:"state,omitempty"`
+	//RetryCount in case of error
+	RetryCount int `json:"retryCount"`
+	//ErrorDescription in case of error
+	ErrorDescription string `json:"errorDescription,omitempty"`
 }
 
-// +kubebuilder:object:root=true
 // +genclient
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=clusters,scope=Namespaced,shortName=cl,singular=cluster
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="current state of the target cluster"
+// +kubebuilder:printcolumn:name="RetryCount",type="integer",JSONPath=".status.retryCount",description="Retry count"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="time passed since managed cluster registration"
 // Cluster is the Schema for the clusters API
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`

@@ -21,3 +21,13 @@ const (
 
 	InClusterAPIServerAddr = "https://kubernetes.default.svc"
 )
+
+const (
+	PropertyClusterValidationFrequency = "cluster.validation.frequency"
+
+	// ManagerNamespaceName is the namespace name where manager controllers are running
+	ManagerNamespaceName = "manager-system"
+
+	// ManagerConfigMapName is the config map name for manager namespace
+	ManagerConfigMapName = "manager-v1alpha1-configmap"
+)

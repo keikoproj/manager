@@ -33,7 +33,7 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 	log := log.Logger(ctx, "server.cluster", "RegisterCluster")
 	log.Info("Request received")
 	log.Info("cluster name from the request", "name", cl.Name)
-	name := utils.SantitizeName(cl.Name)
+	name := utils.SanitizeName(cl.Name)
 	log.V(1).Info("cluster name after sanitizing", "name", name)
 
 	//Create the namespace
@@ -69,9 +69,9 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 
 	//prepare cluster CR request
 	cr := utils.PrepareClusterRequestFromClusterProto(cl)
-	_, err = c.k8sClient.CustomClient().CustomV1alpha1().Clusters(name).Create(cr)
+	err = c.k8sClient.CreateOrUpdateClusterCR(ctx, cr)
 	if err != nil {
-		log.Error(err, "unable to create cluster cr in the target namespace", "name", name)
+		log.Error(err, "unable to create/update cluster CR in the namespace", "name", name)
 		return nil, err
 	}
 

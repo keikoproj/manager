@@ -8,13 +8,30 @@ metadata:
   creationTimestamp: null
   name: clusters.manager.keikoproj.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.state
+    description: current state of the target cluster
+    name: State
+    type: string
+  - JSONPath: .status.retryCount
+    description: Retry count
+    name: RetryCount
+    type: integer
+  - JSONPath: .metadata.creationTimestamp
+    description: time passed since managed cluster registration
+    name: Age
+    type: date
   group: manager.keikoproj.io
   names:
     kind: Cluster
     listKind: ClusterList
     plural: clusters
+    shortNames:
+    - cl
     singular: cluster
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: Cluster is the Schema for the clusters API
@@ -112,6 +129,18 @@ spec:
           type: object
         status:
           description: ClusterStatus defines the observed state of Cluster
+          properties:
+            errorDescription:
+              description: ErrorDescription in case of error
+              type: string
+            retryCount:
+              description: RetryCount in case of error
+              type: integer
+            state:
+              description: State of the resource
+              type: string
+          required:
+          - retryCount
           type: object
       type: object
   version: v1alpha1

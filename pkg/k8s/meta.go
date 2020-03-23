@@ -18,7 +18,7 @@ import (
 
 //SetUpEventHandler sets up event handler with client-go recorder instead of creating events directly
 func (c *Client) SetUpEventHandler(ctx context.Context) record.EventRecorder {
-	log := log.Logger(ctx, "k8s", "client", "SetUpEventHandler")
+	log := log.Logger(ctx, "pkg.k8s", "meta", "SetUpEventHandler")
 	//This was re-written based on job-controller in kubernetes repo
 	//For more info refer: https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/job/job_controller.go
 	eventBroadcaster := record.NewBroadcaster()
