@@ -15,8 +15,11 @@ endif
 
 all: manager
 
+setup: ; $(info $(M) setting up env variables for test…) @ ## Setup env variables
+export LOCAL=true
+
 # Run tests
-test: generate fmt vet manifests
+test: setup generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
