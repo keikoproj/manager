@@ -1,5 +1,16 @@
 # manager
 
+
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)][GithubMaintainedUrl]
+[![PR](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)][GithubPrsUrl]
+[![slack](https://img.shields.io/badge/slack-join%20the%20conversation-ff69b4.svg)][SlackUrl]
+
+![version](https://img.shields.io/badge/version-0.0.1-blue.svg?cacheSeconds=2592000)
+[![Build Status][BuildStatusImg]][BuildMasterUrl]
+[![codecov][CodecovImg]][CodecovUrl]
+[![Go Report Card][GoReportImg]][GoReportUrl]
+
+
 ### What is keiko manager?
 keiko manager provides the capability of managing all the target clusters from the central control plane cluster. In the phase 1 of the project, we are going to concentrate on Namespace Management followed by other features like RBAC, Monitoring and consolidated view of all the clusters in a single pane.
 

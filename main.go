@@ -16,22 +16,25 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"github.com/keikoproj/manager/internal/config"
+	"github.com/keikoproj/manager/pkg/k8s"
+	"github.com/keikoproj/manager/pkg/log"
 	"os"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
 	"github.com/keikoproj/manager/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme = runtime.NewScheme()
+	//setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
@@ -44,43 +47,54 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var debug bool
+
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&debug, "debug", false, "Enable Debug?")
+
 	flag.Parse()
 
-	ctrl.SetLogger(zap.Logger(true))
+	log.New()
+	log := log.Logger(context.Background(), "main", "setup")
+
+	go config.RunConfigMapInformer(context.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
-		LeaderElection:     enableLeaderElection,
+		LeaderElection:     false,
 		Port:               9443,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		log.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
+	log.V(1).Info("Setting up reconciler with manager")
+
 	if err = (&controllers.ClusterReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Cluster"),
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("Cluster"),
+		K8sClient: k8s.NewK8sSelfClientDoOrDie(),
+		Recorder:  k8s.NewK8sSelfClientDoOrDie().SetUpEventHandler(context.Background()),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Cluster")
+		log.Error(err, "unable to create controller", "controller", "Cluster")
 		os.Exit(1)
 	}
 	if err = (&controllers.NamespaceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Namespace"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Namespace")
+		log.Error(err, "unable to create controller", "controller", "Namespace")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("starting manager")
+	log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		log.Error(err, "problem running manager")
 		os.Exit(1)
 	}
 }
