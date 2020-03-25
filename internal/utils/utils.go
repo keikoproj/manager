@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/keikoproj/manager/api/custom/v1alpha1"
+	"github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 	"github.com/keikoproj/manager/pkg/log"
-	"github.com/keikoproj/manager/pkg/proto/cluster"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"os"
@@ -76,4 +76,25 @@ func PrepareK8sRestConfigFromClusterCR(ctx context.Context, cr *v1alpha1.Cluster
 		},
 	}
 	return conf, nil
+}
+
+//ContainsString  Helper functions to check from a slice of strings.
+func ContainsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+//RemoveString Helper function to check remove string
+func RemoveString(slice []string, s string) (result []string) {
+	for _, item := range slice {
+		if item == s {
+			continue
+		}
+		result = append(result, item)
+	}
+	return
 }

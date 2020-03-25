@@ -7,6 +7,7 @@ import (
 	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/pkg/log"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -222,22 +223,37 @@ func (c *Client) GetServiceAccountTokenSecret(ctx context.Context, saName string
 }
 
 //CreateK8sSecret function creates secret in specific namespace
-func (c *Client) CreateK8sSecret(ctx context.Context, secret *corev1.Secret, ns string) error {
-
+func (c *Client) CreateOrUpdateK8sSecret(ctx context.Context, secret *corev1.Secret, ns string) error {
 	log := log.Logger(ctx, "pkg.k8s", "rbac", "CreateK8sSecret")
+	log = log.WithValues("secret_name", secret.Name, "namespace", ns)
 	// Create the k8s secret
-	resp, err := c.cl.CoreV1().Secrets(ns).Create(secret)
+	_, err := c.cl.CoreV1().Secrets(ns).Create(secret)
 	if err != nil {
 		if !apierr.IsAlreadyExists(err) {
 			msg := fmt.Sprintf("unable to create the secret %s", secret.Name)
 			log.Error(err, msg)
 			return errors.New(msg)
 		}
-		log.Info("Namespace already exists", "name", secret.Name)
-		return nil
+		//Modify the get response and retry update until no conflicts
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Get the present CR to bump up the resource version
+			resp, err := c.GetK8sSecret(ctx, secret.Name, ns)
+			if err != nil {
+				log.Error(err, "unable to get secret in the target namespace")
+				return err
+			}
+
+			resp.StringData = secret.StringData
+			_, err = c.cl.CoreV1().Secrets(ns).Update(resp)
+			return err
+		})
+		if retryErr != nil {
+			log.Error(retryErr, "unable to update the secret")
+			return retryErr
+		}
 	}
 
-	log.Info("Successfully created secret", "name", resp.Name)
+	log.Info("Successfully created/updated secret")
 
 	return nil
 }

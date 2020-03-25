@@ -19,12 +19,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/keikoproj/manager/internal/config"
+	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/internal/utils"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
 	"github.com/pborman/uuid"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -56,6 +58,7 @@ type ClusterReconciler struct {
 	Recorder  record.EventRecorder
 }
 
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=manager.keikoproj.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=manager.keikoproj.io,resources=clusters/status,verbs=get;update;patch
@@ -80,18 +83,16 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, ignoreNotFound(err)
 	}
 
+	// Retrieve k8s secret
+	// Get the "best" Bearer token
+	// Get the ManagedCluster k8s client
+
 	state := managerv1alpha1.Warning
+
 	if cluster.Status.RetryCount > 3 {
 		state = managerv1alpha1.Error
 	}
 
-	log.Info("received", "cluster_secret", cluster.Spec.Config.BearerTokenSecret)
-	// Retrieve k8s secret
-	// Get the "best" Bearer token
-	// Get the ManagedCluster k8s client
-	// Validate the connection
-	// Update the status
-	// Requeue it based on config map variable
 	secret, err := r.K8sClient.GetK8sSecret(ctx, cluster.Spec.Config.BearerTokenSecret, cluster.ObjectMeta.Namespace)
 	if err != nil {
 		log.Error(err, "unable to retrieve the bearer token for the given cluster")
@@ -106,16 +107,65 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		r.Recorder.Event(&cluster, v1.EventTypeWarning, string(state), desc)
 		return r.UpdateStatus(ctx, &cluster, managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc}, state, errRequeueTime)
 	}
+
+	// Isit being deleted?
+	if cluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		//Good. This is not Delete use case
+		//Lets check if this is very first time use case
+		if !utils.ContainsString(cluster.ObjectMeta.Finalizers, finalizerName) {
+			log.Info("New cluster resource. Adding the finalizer", "finalizer", finalizerName)
+			cluster.ObjectMeta.Finalizers = append(cluster.ObjectMeta.Finalizers, finalizerName)
+			r.UpdateMeta(ctx, &cluster)
+		}
+		return r.HandleReconcile(ctx, req, &cluster, cfg)
+
+	} else {
+		//oh oh.. This is delete use case
+		//Lets make sure to clean up the iam role
+		if cluster.Status.RetryCount != 0 {
+			cluster.Status.RetryCount = cluster.Status.RetryCount + 1
+		}
+		log.Info("Cluster delete request")
+		if err := removeRBACInManagedCluster(ctx, cfg); err != nil {
+			log.Error(err, "Unable to delete the cluster")
+			r.UpdateStatus(ctx, &cluster, managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: err.Error()}, managerv1alpha1.Error)
+			r.Recorder.Event(&cluster, v1.EventTypeWarning, string(managerv1alpha1.Error), "unable to delete the cluster due to "+err.Error())
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+
+		// Ok. Lets delete the finalizer so controller can delete the custom object
+		log.Info("Removing finalizer from Cluster")
+		cluster.ObjectMeta.Finalizers = utils.RemoveString(cluster.ObjectMeta.Finalizers, finalizerName)
+		r.UpdateMeta(ctx, &cluster)
+		log.Info("Successfully deleted cluster")
+		r.Recorder.Event(&cluster, v1.EventTypeNormal, "Deleted", "Successfully deleted cluster")
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *ClusterReconciler) HandleReconcile(ctx context.Context, req ctrl.Request, cluster *managerv1alpha1.Cluster, cfg *rest.Config) (ctrl.Result, error) {
+	log := log.Logger(ctx, "controllers", "cluster_controller", "HandleReconcile")
+	log.WithValues("cluster_name", cluster.Spec.Name)
+	log.Info("state of the custom resource ", "state", cluster.Status.State)
+
+	state := managerv1alpha1.Warning
+
+	if cluster.Status.RetryCount > 3 {
+		state = managerv1alpha1.Error
+	}
+	// Validate the connection
+	// Update the status
+	// Requeue it based on config map variable
 	// Ge the Managed cluster client
 	resp, err := GetServerVersion(cfg)
 	if err != nil {
 		log.Error(err, "unable to get the server version", "cluster", cluster.Spec.Name)
 		desc := fmt.Sprintf("Unable to get the server version due to error %s", err.Error())
-		r.Recorder.Event(&cluster, v1.EventTypeWarning, string(state), desc)
-		return r.UpdateStatus(ctx, &cluster, managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc}, state, errRequeueTime)
+		r.Recorder.Event(cluster, v1.EventTypeWarning, string(state), desc)
+		return r.UpdateStatus(ctx, cluster, managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc}, state, errRequeueTime)
 	}
-	r.Recorder.Event(&cluster, v1.EventTypeNormal, string(managerv1alpha1.Ready), "Successfully validated the target cluster")
-	r.UpdateStatus(ctx, &cluster, managerv1alpha1.ClusterStatus{RetryCount: 0, ErrorDescription: ""}, managerv1alpha1.Ready)
+	r.Recorder.Event(cluster, v1.EventTypeNormal, string(managerv1alpha1.Ready), "Successfully validated the target cluster")
+	r.UpdateStatus(ctx, cluster, managerv1alpha1.ClusterStatus{RetryCount: 0, ErrorDescription: ""}, managerv1alpha1.Ready)
 	log.Info("SUCCESSFUL", "version", resp)
 	return ctrl.Result{RequeueAfter: time.Duration(config.Props.ClusterValidationFrequency()) * time.Second}, nil
 }
@@ -217,4 +267,39 @@ func GetServerVersion(config *rest.Config) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%s.%s", v.Major, v.Minor), nil
+}
+
+func removeRBACInManagedCluster(ctx context.Context, conf *rest.Config) error {
+	log := log.Logger(ctx, "controllers", "cluster_controller", "removeRBACInManagedCluster")
+
+	clientSet, err := kubernetes.NewForConfig(conf)
+	if err != nil {
+		log.Error(err, "unable to create the client for the target cluster")
+		return err
+	}
+	client := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
+
+	// TO BE DISCUSSED: When you want to unregister any cluster, should we delete the service account as well??
+	////Delete Cluster RoleBinding
+	//err = client.DeleteClusterRoleBinding(ctx, common.ManagerClusterRoleBinding)
+	//if err != nil {
+	//	log.Error(err, "unable to delete cluster role binding in the target cluster")
+	//	return err
+	//}
+	//
+	////Delete Cluster Role
+	//err = client.DeleteClusterRole(ctx, common.ManagerClusterRole)
+	//if err != nil {
+	//	log.Error(err, "unable to delete cluster role in the target cluster")
+	//	return err
+	//}
+
+	//Delete Service Account
+	err = client.DeleteServiceAccount(ctx, common.ManagerServiceAccountName, common.SystemNameSpace)
+	if err != nil {
+		log.Error(err, "unable to delete service account in the target cluster")
+		return err
+	}
+
+	return nil
 }

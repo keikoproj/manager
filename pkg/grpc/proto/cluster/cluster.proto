@@ -70,17 +70,16 @@ message TLSClientConfig {
 
 }
 
-message RegisterClusterRequest {
-
+message UnregisterClusterRequest {
+    string clusterName = 1;
 }
 
-message RegisterClusterResponse {
+message UnregisterClusterResponse {
 
 }
 
 
 service ClusterService {
-    rpc RegisterCluster(Cluster) returns (Cluster){
-
-    }
+    rpc RegisterCluster(Cluster) returns (Cluster){}
+    rpc UnregisterCluster(UnregisterClusterRequest) returns (UnregisterClusterResponse){}
 }

@@ -100,7 +100,7 @@ endif
 
 proto: proto-gen-tools
 	@echo "Generating protogen files:"
- 	$(shell protoc --go_out=paths=source_relative,plugins=grpc:. pkg/proto/cluster/cluster.proto)
+ 	$(shell protoc --go_out=paths=source_relative,plugins=grpc:. pkg/grpc/proto/cluster/cluster.proto)
 
 .PHONY: clientgen
 clientgen: client-gen-tools

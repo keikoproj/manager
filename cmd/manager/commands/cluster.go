@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/keikoproj/manager/pkg/proto/cluster"
+	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 )
 
 // NewClusterCommand returns a new instance of an `manager cluster` command
@@ -92,7 +92,7 @@ func NewClusterRegisterCommand() *cobra.Command {
 			//Call Server
 			resp, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().RegisterCluster(ctx, cl)
 			utils.StopIfError(err)
-			fmt.Printf("Successfully registerd %s cluster", resp.Name)
+			fmt.Printf("Successfully registerd %s cluster\n", resp.Name)
 		},
 	}
 
@@ -109,7 +109,7 @@ func NewClusterRegisterCommand() *cobra.Command {
 //At the moment, we concentrate only on removing the created rbac resources in the target clusters.
 func NewClusterUnregisterCommand() *cobra.Command {
 	var (
-		configContext string
+		clusterName string
 	)
 
 	var command = &cobra.Command{
@@ -118,17 +118,23 @@ func NewClusterUnregisterCommand() *cobra.Command {
 		Long:    "Remove/unregister managed cluster from manager",
 		Example: "manager cluster unregister -c admins@iksm-ppd-usw2-k8s",
 		Run: func(c *cobra.Command, args []string) {
-			conf, name := getManagedClusterKubeConfig(configContext)
-			clientSet, err := kubernetes.NewForConfig(conf)
-			utils.StopIfError(err)
+			//conf, name := getManagedClusterKubeConfig(configContext)
+			//clientSet, err := kubernetes.NewForConfig(conf)
+			//utils.StopIfError(err)
 			ctx := context.Background()
-			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
-			removeRBACInManagedCluster(ctx, managedClusterClient)
-			fmt.Printf("Clsuetr %s is removed successfully", name)
+			//managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
+			//removeRBACInManagedCluster(ctx, managedClusterClient)
+			//fmt.Printf("Clsuetr %s is removed successfully", name)
+			req := &pb.UnregisterClusterRequest{
+				ClusterName: clusterName,
+			}
+			_, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().UnregisterCluster(ctx, req)
+			utils.StopIfError(err)
+			fmt.Println("Successfully unregistered the cluster from manager")
 		},
 	}
 
-	command.Flags().StringVarP(&configContext, "use-context", "c", "", "context to be used from user kubeconfig file. This kubeconfig context must have cluster admin access to create required RBAC in the target cluster if service account is not provided")
+	command.Flags().StringVarP(&clusterName, "cluster-name", "c", "", "Unregister the cluster with the manager which deletes the service account from target cluster too")
 
 	return command
 }

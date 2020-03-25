@@ -118,13 +118,13 @@ var _ = Describe("K8s_rbac", func() {
 		})
 		Context("Create a k8s secret with empty struct", func() {
 			It("Should fail it as it needs secret name", func() {
-				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{}, common.SystemNameSpace)
+				err := cl.CreateOrUpdateK8sSecret(context.Background(), &corev1.Secret{}, common.SystemNameSpace)
 				Expect(err).NotTo(BeNil())
 			})
 		})
 		Context("Create a k8s secret with valid name", func() {
 			It("Should be successful", func() {
-				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+				err := cl.CreateOrUpdateK8sSecret(context.Background(), &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ops-prim-ppd",
 					},
@@ -135,7 +135,7 @@ var _ = Describe("K8s_rbac", func() {
 
 		Context("Create a k8s secret with same name again", func() {
 			It("Should be successful", func() {
-				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+				err := cl.CreateOrUpdateK8sSecret(context.Background(), &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ops-prim-ppd",
 					},
@@ -145,7 +145,7 @@ var _ = Describe("K8s_rbac", func() {
 		})
 		Context("Create a k8s secret with invalid name", func() {
 			It("Should fail due to invalid naming convention", func() {
-				err := cl.CreateK8sSecret(context.Background(), &corev1.Secret{
+				err := cl.CreateOrUpdateK8sSecret(context.Background(), &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ops-prim_ppd",
 					},

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/keikoproj/manager/internal/utils"
+	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
-	pb "github.com/keikoproj/manager/pkg/proto/cluster"
 	"k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,9 +61,9 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 		StringData: s,
 	}
 
-	err = c.k8sClient.CreateK8sSecret(ctx, secret, name)
+	err = c.k8sClient.CreateOrUpdateK8sSecret(ctx, secret, name)
 	if err != nil {
-		log.Error(err, "unable to create secret in the namespace", "name", name)
+		log.Error(err, "unable to create/update secret in the namespace", "name", name)
 		return nil, err
 	}
 
@@ -76,4 +76,29 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 	}
 
 	return cl, nil
+}
+
+//UnregisterCluster unregisters the cluster with the server
+func (c *clusterService) UnregisterCluster(ctx context.Context, req *pb.UnregisterClusterRequest) (*pb.UnregisterClusterResponse, error) {
+	//Good thing is, we can just delete the respective namespace for that cluster and all the resources should be deleted
+	//This should send the event to cluster controller implicitly and doesn't need to delete the cluster CR
+
+	log := log.Logger(ctx, "server.cluster", "UnregisterCluster")
+	log.Info("cluster name from the request", "name", req.ClusterName)
+	name := utils.SanitizeName(req.ClusterName)
+	log.V(1).Info("cluster name after sanitizing", "name", name)
+
+	//Delete cluster CR before deleting namespace
+	err := c.k8sClient.CustomClient().CustomV1alpha1().Clusters(name).Delete(name, &metav1.DeleteOptions{})
+	if err != nil {
+		log.Error(err, "unable to delete the cluster cr", "name", name)
+		return nil, err
+	}
+
+	err = c.k8sClient.DeleteNamespace(ctx, name)
+	if err != nil {
+		log.Error(err, "unable to delete the namespace", "name", name)
+		return nil, err
+	}
+	return &pb.UnregisterClusterResponse{}, nil
 }

@@ -3,7 +3,7 @@ package grpc
 import (
 	"flag"
 	"fmt"
-	pb "github.com/keikoproj/manager/pkg/proto/cluster"
+	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/testdata"
