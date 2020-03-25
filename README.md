@@ -34,7 +34,7 @@ Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## Developer Guide
 
-Please see [DEVELOPER.md](.github/DEVELOPER.md).
+Please see [DEVELOPER.md](.github/DEVELOPER.md)
 
 <!-- Markdown link -->
 [install]: docs/README.md

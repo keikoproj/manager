@@ -37,6 +37,7 @@ jobs:
       if: type IN (push)
       script:
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-        - if [ $TRAVIS_EVENT_TYPE = push ]; then export IMG=keikoproj/manager:$TRAVIS_BRANCH; fi
+        - if [ $TRAVIS_EVENT_TYPE = push ]; then export CONTROLLER_TAG=keikoproj/manager:$TRAVIS_BRANCH; fi
+        - if [ $TRAVIS_EVENT_TYPE = push ]; then export SERVER_TAG=keikoproj/server:$TRAVIS_BRANCH; fi
         - make docker-build
         - make docker-push
