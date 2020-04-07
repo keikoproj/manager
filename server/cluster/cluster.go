@@ -42,7 +42,7 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 			Name: name,
 		},
 	}
-	err := c.k8sClient.CreateNamespace(ctx, ns)
+	err := c.k8sClient.CreateOrUpdateNamespace(ctx, ns)
 	if err != nil {
 		log.Error(err, "unable to create namespace", "name", name)
 		return nil, err

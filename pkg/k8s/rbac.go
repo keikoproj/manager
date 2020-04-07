@@ -16,8 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//CreateServiceAccount adds the service account in the target cluster
-func (c *Client) CreateServiceAccount(ctx context.Context, saName string, ns string) error {
+//CreateServiceAccountForCluster adds the service account in the target cluster
+func (c *Client) CreateServiceAccountForCluster(ctx context.Context, saName string, ns string) error {
 	log := log.Logger(ctx, "pkg.k8s", "rbac", "CreateServiceAccount")
 	serviceAccount := corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -29,17 +29,35 @@ func (c *Client) CreateServiceAccount(ctx context.Context, saName string, ns str
 			Namespace: ns,
 		},
 	}
-	_, err := c.cl.CoreV1().ServiceAccounts(ns).Create(&serviceAccount)
+	err := c.CreateServiceAccount(ctx, &serviceAccount, ns)
+	if err != nil {
+		return err
+	}
+	log.Info("Service account got created successfully", "serviceAccount", saName, "namespace", ns)
+	return nil
+}
+
+//CreateServiceAccount adds the service account
+func (c *Client) CreateServiceAccount(ctx context.Context, sa *corev1.ServiceAccount, ns string) error {
+	log := log.Logger(ctx, "pkg.k8s", "rbac", "CreateServiceAccount")
+
+	_, err := c.cl.CoreV1().ServiceAccounts(ns).Create(sa)
 	if err != nil {
 		if !apierr.IsAlreadyExists(err) {
-			msg := fmt.Sprintf("Failed to create service account %s in namespace %s due to %v", saName, ns, err)
+			msg := fmt.Sprintf("Failed to create service account %s in namespace %s due to %v", sa.Name, ns, err)
 			log.Error(err, msg)
 			return errors.New(msg)
 		}
-		log.Info("Service account already exists", "serviceAccount", saName, "namespace", ns)
+		log.Info("Service account already exists. Trying to update", "serviceAccount", sa.Name, "namespace", ns)
+		_, err = c.cl.CoreV1().ServiceAccounts(ns).Update(sa)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to update service account %s due to %v", sa.Name, err)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
 		return nil
 	}
-	log.Info("Service account got created successfully", "serviceAccount", saName, "namespace", ns)
+	log.Info("Service account got created successfully", "serviceAccount", sa.Name, "namespace", ns)
 	return nil
 }
 
@@ -63,7 +81,7 @@ func (c *Client) DeleteServiceAccount(ctx context.Context, saName string, ns str
 
 //CreateOrUpdateClusterRole create or updates cluster role
 func (c *Client) CreateOrUpdateClusterRole(ctx context.Context, name string) error {
-	log := log.Logger(ctx, "pkg.k8s", "client", "AddServiceAccount")
+	log := log.Logger(ctx, "pkg.k8s", "client", "CreateOrUpdateClusterRole")
 	clusterRole := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: common.RBACApiVersion,
@@ -103,6 +121,30 @@ func (c *Client) CreateOrUpdateClusterRole(ctx context.Context, name string) err
 		}
 	}
 	log.Info("Successfully created cluster role", "clusterRole", name)
+	return nil
+}
+
+//CreateOrUpdateRole create or updates role
+func (c *Client) CreateOrUpdateRole(ctx context.Context, role *rbacv1.Role, ns string) error {
+	log := log.Logger(ctx, "pkg.k8s", "client", "CreateOrUpdateRole")
+
+	_, err := c.cl.RbacV1().Roles(ns).Create(role)
+	if err != nil {
+		if !apierr.IsAlreadyExists(err) {
+			msg := fmt.Sprintf("Failed to create role %s due to %v", role.Name, err)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
+		log.Info("Role Already exists. Trying to update", "name", role.Name)
+		//Already exists. lets Update it
+		_, err := c.cl.RbacV1().Roles(ns).Update(role)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to update role %s due to %v", role.Name, err)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
+	}
+	log.Info("Successfully created/updated role", "role", role.Name)
 	return nil
 }
 
@@ -159,6 +201,29 @@ func (c *Client) CreateOrUpdateClusterRoleBinding(ctx context.Context, name stri
 		}
 	}
 	log.Info("Successfully created cluster RoleBinding", "clusterRoleBinding", name, "clusterRole", clusterRoleName)
+	return nil
+}
+
+//CreateOrUpdateClusterRole create or updates cluster role
+func (c *Client) CreateOrUpdateRoleBinding(ctx context.Context, binding *rbacv1.RoleBinding, ns string) error {
+	log := log.Logger(ctx, "pkg.k8s", "client", "CreateOrUpdateRoleBinding")
+	_, err := c.cl.RbacV1().RoleBindings(ns).Create(binding)
+	if err != nil {
+		if !apierr.IsAlreadyExists(err) {
+			msg := fmt.Sprintf("Failed to create role binding %s due to %v", binding.Name, err)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
+		log.Info("RoleBinding Already exists. Trying to update", "RoleBinding", binding.Name, "Role", binding.RoleRef.Name)
+		//Already exists. lets Update it
+		_, err := c.cl.RbacV1().RoleBindings(ns).Update(binding)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to update role binding %s due to %v", binding.Name, err)
+			log.Error(err, msg)
+			return errors.New(msg)
+		}
+	}
+	log.Info("Successfully created/updated RoleBinding", "RoleBinding", binding.Name, "Role", binding.RoleRef.Name)
 	return nil
 }
 

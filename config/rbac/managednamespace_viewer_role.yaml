@@ -1,22 +1,16 @@
-
----
+# permissions for end users to view managednamespaces.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: managednamespace-viewer-role
 rules:
 - apiGroups:
   - manager.keikoproj.io
   resources:
   - managednamespaces
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - manager.keikoproj.io
@@ -24,5 +18,3 @@ rules:
   - managednamespaces/status
   verbs:
   - get
-  - patch
-  - update

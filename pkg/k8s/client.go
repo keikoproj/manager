@@ -39,7 +39,12 @@ func NewK8sSelfClientDoOrDie() *Client {
 }
 
 //NewK8sManagedClusterClientDoOrDie creates a client for managed cluster or config passed
-func NewK8sManagedClusterClientDoOrDie(client *kubernetes.Clientset) *Client {
+func NewK8sManagedClusterClientDoOrDie(config *rest.Config) *Client {
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
 	cl := &Client{
 		cl: client,
 	}

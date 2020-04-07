@@ -1,0 +1,33 @@
+syntax = "proto3";
+package namespace;
+
+option go_package = "pkg/grpc/proto/namespace";
+
+import "pkg/grpc/proto/namespace/template.proto";
+
+
+message Namespace {
+
+    //Name of the cluster in which this namespace to be created
+    // +kubebuilder:validation:MinLength=1
+    // +kubebuilder:validation:MaxLength=63
+    // +kubebuilder:validation:Pattern=^[a-z0-9-]+$
+    // +kubebuilder:validation:Required
+    string clusterName = 1;
+
+    //Name of the template to be used to create this namespace
+    //This template must be already exists in the manager
+    // +optional
+    string templateName = 2;
+
+    //params can be used to pass the values to the underlying template being used
+    //If included, it tries to replace it in the template mentioned with exported fields
+    // +optional
+    map<string, string> params = 3;
+
+    // NamespaceResources to be created. If templateName also included in the request,
+    //make sure to use this to add "additional resources" only apart from the template
+    // DO NOT Provide namespace in the resources section if you already provided the templateName
+    // +optional
+    NamespaceResources nsResources = 4;
+}

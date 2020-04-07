@@ -1,0 +1,12 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: ManagedNamespace
+metadata:
+  name: managednamespace-sample
+  namespace: docker-desktop
+spec:
+  clusterName: docker-desktop
+  params:
+    env: "dev"
+    registry: "docker.io"
+    name: "first-namespace"
+  templateName: namespacetemplate-sample

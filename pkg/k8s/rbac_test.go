@@ -16,17 +16,17 @@ var _ = Describe("K8s_rbac", func() {
 
 		Context("new service account creation", func() {
 			It("should be successful", func() {
-				Expect(cl.CreateServiceAccount(context.Background(), common.ManagerServiceAccountName, common.SystemNameSpace)).To(BeNil())
+				Expect(cl.CreateServiceAccountForCluster(context.Background(), common.ManagerServiceAccountName, common.SystemNameSpace)).To(BeNil())
 			})
 		})
 		Context("Trying to create the same service account", func() {
 			It("shouldn't fail", func() {
-				Expect(cl.CreateServiceAccount(context.Background(), common.ManagerServiceAccountName, common.SystemNameSpace)).To(BeNil())
+				Expect(cl.CreateServiceAccountForCluster(context.Background(), common.ManagerServiceAccountName, common.SystemNameSpace)).To(BeNil())
 			})
 		})
 		Context("new service account with bad name", func() {
 			It("should throw error", func() {
-				Expect(cl.CreateServiceAccount(context.Background(), "some_bad_name", common.SystemNameSpace)).NotTo(BeNil())
+				Expect(cl.CreateServiceAccountForCluster(context.Background(), "some_bad_name", common.SystemNameSpace)).NotTo(BeNil())
 			})
 		})
 

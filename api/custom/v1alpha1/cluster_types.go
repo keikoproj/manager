@@ -101,11 +101,9 @@ type TLSClientConfig struct {
 type State string
 
 const (
-	Ready                State = "Ready"
-	Warning              State = "Warning"
-	Error                State = "Error"
-	PolicyNotAllowed     State = "PolicyNotAllowed"
-	RolesMaxLimitReached State = "RolesMaxLimitReached"
+	Ready   State = "Ready"
+	Warning State = "Warning"
+	Error   State = "Error"
 )
 
 // ClusterStatus defines the observed state of Cluster

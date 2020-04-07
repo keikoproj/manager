@@ -18,17 +18,19 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
+
 	"github.com/keikoproj/manager/internal/config"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
-	"os"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
-	"github.com/keikoproj/manager/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	"github.com/keikoproj/manager/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -66,6 +68,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     false,
 		Port:               9443,
+		LeaderElectionID:   "iam-manager-controller-system",
 	})
 	if err != nil {
 		log.Error(err, "unable to start manager")
@@ -73,21 +76,25 @@ func main() {
 	}
 
 	log.V(1).Info("Setting up reconciler with manager")
-
+	recorder := k8s.NewK8sSelfClientDoOrDie().SetUpEventHandler(context.Background())
 	if err = (&controllers.ClusterReconciler{
-		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("Cluster"),
-		K8sClient: k8s.NewK8sSelfClientDoOrDie(),
-		Recorder:  k8s.NewK8sSelfClientDoOrDie().SetUpEventHandler(context.Background()),
+		Client:        mgr.GetClient(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Cluster"),
+		K8sSelfClient: k8s.NewK8sSelfClientDoOrDie(),
+		Recorder:      recorder,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "Cluster")
 		os.Exit(1)
 	}
-	if err = (&controllers.NamespaceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Namespace"),
+
+	if err = (&controllers.ManagedNamespaceReconciler{
+		Client:        mgr.GetClient(),
+		Log:           ctrl.Log.WithName("controllers").WithName("ManagedNamespace"),
+		Scheme:        mgr.GetScheme(),
+		Recorder:      recorder,
+		K8sSelfClient: k8s.NewK8sSelfClientDoOrDie(),
 	}).SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "Namespace")
+		log.Error(err, "unable to create controller", "controller", "ManagedNamespace")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

@@ -20,6 +20,12 @@ const (
 	ClusterRoleBindingKind = "ClusterRoleBinding"
 
 	InClusterAPIServerAddr = "https://kubernetes.default.svc"
+
+	RoleKind = "Role"
+
+	RoleBindingKind = "RoleBinding"
+
+	ResourceQuotaKind = "ResourceQuota"
 )
 
 const (

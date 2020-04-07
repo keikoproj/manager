@@ -1,0 +1,12 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: ManagedNamespace
+metadata:
+  name: second-namespace
+  namespace: docker-desktop
+spec:
+  clusterName: docker-desktop
+  params:
+    env: "preprod"
+    registry: "docker.io"
+    name: "second-namespace"
+  templateName: namespacetemplate-sample

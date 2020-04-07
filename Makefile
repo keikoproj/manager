@@ -101,9 +101,9 @@ else
 PROTO_GEN=$(shell which protoc-gen-go)
 endif
 
+.PHONY: proto
 proto: proto-gen-tools
-	@echo "Generating protogen files:"
- 	$(shell protoc --go_out=paths=source_relative,plugins=grpc:. pkg/grpc/proto/cluster/cluster.proto)
+	./hack/gen-proto.sh
 
 .PHONY: clientgen
 clientgen: client-gen-tools

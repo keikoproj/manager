@@ -98,3 +98,15 @@ func RemoveString(slice []string, s string) (result []string) {
 	}
 	return
 }
+
+//BoolValue converts string value to bool
+func BoolValue(flag string) bool {
+	if strings.EqualFold(flag, "true") {
+		return true
+	}
+
+	if strings.EqualFold(flag, "false") {
+		return false
+	}
+	return false
+}
