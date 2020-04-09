@@ -77,7 +77,8 @@ var _ = BeforeSuite(func(done Done) {
 	c, err := kubernetes.NewForConfig(cfg)
 	Expect(err).ToNot(HaveOccurred())
 	cl = Client{
-		cl: c,
+		cl:            c,
+		runtimeClient: k8sClient,
 	}
 	Expect(cl).ToNot(BeNil())
 	close(done)

@@ -5,6 +5,7 @@ resources:
 - bases/manager.keikoproj.io_clusters.yaml
 - bases/manager.keikoproj.io_managednamespaces.yaml
 - bases/manager.keikoproj.io_namespacetemplate.yaml
+- bases/manager.keikoproj.io_applications.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

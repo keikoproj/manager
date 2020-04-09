@@ -26,6 +26,8 @@ const (
 	RoleBindingKind = "RoleBinding"
 
 	ResourceQuotaKind = "ResourceQuota"
+
+	CustomResourceKind = "CustomResource"
 )
 
 const (

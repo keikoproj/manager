@@ -26,6 +26,7 @@ import (
 	"github.com/keikoproj/manager/pkg/log"
 	"github.com/pborman/uuid"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -45,13 +46,14 @@ const (
 	//2 minutes
 	maxWaitTime = 120000
 	//30 seconds
-	errRequeueTime = 30000
+	errRequeueTime = 300000
 )
 
 // ClusterReconciler reconciles a Cluster object
 type ClusterReconciler struct {
 	client.Client
 	Log           logr.Logger
+	Scheme        *runtime.Scheme
 	K8sSelfClient *k8s.Client
 	Recorder      record.EventRecorder
 }
@@ -60,10 +62,12 @@ type ClusterReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=manager.keikoproj.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=manager.keikoproj.io,resources=clusters/status,verbs=get;update;patch
-//Main responsibilities of the cluster controller should be
-//1. Handling service account bearer token rotation
-//2. Validation of certain namespaces(??)
+
 func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+
+	//Main responsibilities of the cluster controller should be
+	//1. Handling service account bearer token rotation
+	//2. Validation of certain namespaces(??)
 
 	defer func() {
 		if err := recover(); err != nil {

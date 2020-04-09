@@ -1,0 +1,42 @@
+syntax = "proto3";
+// +kubebuilder:object:generate=true
+package application;
+
+import "pkg/grpc/proto/namespace/namespace.proto";
+
+option go_package = "github.com/keikoproj/manager/pkg/grpc/proto/application";
+
+
+
+
+message Application {
+    //Application Name
+    // +kubebuilder:validation:MinLength=1
+    //Leave 5 characters to the env since namespace will be constructed using ${appName}-${env}
+    // +kubebuilder:validation:MaxLength=59
+    // +kubebuilder:validation:Pattern=^[a-z0-9-]+$
+    // +kubebuilder:validation:Required
+    // +required
+    string appName = 1;
+
+    //appParams can be used to pass the values to the underlying template being used
+    //If included, it tries to replace it in the template mentioned with exported fields
+    //If the same entry is provided in namespace params too then it will be overwritten by namespace param value
+    // +optional
+    map<string, string> appParams = 2;
+
+    //List of environments to be created for this application
+    // +kubebuilder:validation:MinItems=1
+    repeated Environment environments = 11;
+}
+
+message Environment {
+    //Application environment
+    // +kubebuilder:validation:MinLength=1
+    // +kubebuilder:validation:Pattern=^[a-z0-9-]+$
+    // +required
+    string name = 1;
+    //Each environment must have one namespace
+    // +required
+    namespace.Namespace namespace = 6;
+}

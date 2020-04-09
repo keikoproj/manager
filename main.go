@@ -76,11 +76,13 @@ func main() {
 	}
 
 	log.V(1).Info("Setting up reconciler with manager")
-	recorder := k8s.NewK8sSelfClientDoOrDie().SetUpEventHandler(context.Background())
+	k8sSelfCliennt := k8s.NewK8sSelfClientDoOrDie()
+	recorder := k8sSelfCliennt.SetUpEventHandler(context.Background())
 	if err = (&controllers.ClusterReconciler{
 		Client:        mgr.GetClient(),
 		Log:           ctrl.Log.WithName("controllers").WithName("Cluster"),
-		K8sSelfClient: k8s.NewK8sSelfClientDoOrDie(),
+		Scheme:        mgr.GetScheme(),
+		K8sSelfClient: k8sSelfCliennt,
 		Recorder:      recorder,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "Cluster")
@@ -92,9 +94,20 @@ func main() {
 		Log:           ctrl.Log.WithName("controllers").WithName("ManagedNamespace"),
 		Scheme:        mgr.GetScheme(),
 		Recorder:      recorder,
-		K8sSelfClient: k8s.NewK8sSelfClientDoOrDie(),
+		K8sSelfClient: k8sSelfCliennt,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ManagedNamespace")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.ApplicationReconciler{
+		Client:        mgr.GetClient(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Application"),
+		Scheme:        mgr.GetScheme(),
+		Recorder:      recorder,
+		K8sSelfClient: k8sSelfCliennt,
+	}).SetupWithManager(mgr); err != nil {
+		log.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

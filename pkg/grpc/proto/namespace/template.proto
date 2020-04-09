@@ -1,13 +1,13 @@
 syntax = "proto3";
 package namespace;
 
-option go_package = "pkg/grpc/proto/namespace";
-
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/api/rbac/v1/generated.proto";
 //import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 //import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 //import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
+
+option go_package = "github.com/keikoproj/manager/pkg/grpc/proto/namespace";
 
 message NamespaceTemplate {
     //exportedParamName to be exported from this template
@@ -54,16 +54,21 @@ message Resource {
     // the server side and everything else will be ignored.
     // +optional
     k8s.io.api.core.v1.ResourceQuota resourceQuota = 4;
+    //CustomResource to be created for this namespace
+    //Must include type=CustomResource and only CustomResource will be read at
+    // the server side and everything else will be ignored
+    // +optional
+    CustomResource customResource = 5;
 
     // +required
     string name = 15;
-    //Typre represents which k8s resource is being included in the resource entry
+    //Type represents which k8s resource is being included in the resource entry
     //Allowed values are
     // - ServiceAccount
     // - Role
     // - RoleBinding
     // - ResourceQuota
-    // +kubebuilder:validation:Enum=ServiceAccount;Role;RoleBinding;ResourceQuota
+    // +kubebuilder:validation:Enum=ServiceAccount;Role;RoleBinding;ResourceQuota;CustomResource
     string type = 16;
 
     //dependsOn is an optional field and can be used to delay the creation until the referenced resource got created
@@ -78,3 +83,25 @@ message Resource {
 
 }
 
+
+message CustomResource {
+    //GroupVersionKind should be used to provide the specific GVK for this custom resource
+    GroupVersionKind GVK = 1;
+
+    //manifest should be used to provide the custom resource manifest and must be in JSON
+    string manifest = 2;
+
+}
+
+//GroupVersionKind can be used to provide GVK of a custom resource
+message GroupVersionKind {
+    //group -custom resource group
+    // +required
+    string group = 1;
+    //version - custom resource version
+    // +required
+    string version = 2;
+    //kind - custom resource kind
+    // +required
+    string kind = 3;
+}

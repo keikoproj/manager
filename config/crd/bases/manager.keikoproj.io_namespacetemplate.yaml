@@ -130,6 +130,31 @@ spec:
                         - "true"
                         - "false"
                         type: string
+                      customResource:
+                        description: CustomResource to be created for this namespace
+                          Must include type=CustomResource and only CustomResource
+                          will be read at the server side and everything else will
+                          be ignored
+                        properties:
+                          GVK:
+                            description: GroupVersionKind should be used to provide
+                              the specific GVK for this custom resource
+                            properties:
+                              group:
+                                description: group -custom resource group
+                                type: string
+                              kind:
+                                description: kind - custom resource kind
+                                type: string
+                              version:
+                                description: version - custom resource version
+                                type: string
+                            type: object
+                          manifest:
+                            description: manifest should be used to provide the custom
+                              resource manifest and must be in JSON
+                            type: string
+                        type: object
                       dependsOn:
                         description: dependsOn is an optional field and can be used
                           to delay the creation until the referenced resource got
@@ -503,14 +528,15 @@ spec:
                             type: array
                         type: object
                       type:
-                        description: Typre represents which k8s resource is being
-                          included in the resource entry Allowed values are - ServiceAccount
+                        description: Type represents which k8s resource is being included
+                          in the resource entry Allowed values are - ServiceAccount
                           - Role - RoleBinding - ResourceQuota
                         enum:
                         - ServiceAccount
                         - Role
                         - RoleBinding
                         - ResourceQuota
+                        - CustomResource
                         type: string
                     type: object
                   type: array

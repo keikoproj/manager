@@ -1,22 +1,37 @@
 apiVersion: manager.keikoproj.io/v1alpha1
 kind: NamespaceTemplate
 metadata:
-  name: namespacetemplate-sample
+  name: intuit-template
 spec:
   exportedParamName:
-    - registry
-    - env
     - name
+    - env
+    - allowedIG
+    - serviceAssetName
+    - serviceAssetId
   nsResources:
     namespace:
       apiVersion: v1
       kind: Namespace
       metadata:
         annotations:
-          imageregistry.com: ${registry}
-          something.com/permitted: some-role
+          iam.amazonaws.com/permitted: k8s-${name}
+          k8s.intuit.com/managedBy: keiko-manager
+          iks.intuit.com/allowHostIPC: "false"
+          iks.intuit.com/allowHostNetwork: "false"
+          iks.intuit.com/allowHostPID: "false"
+          iks.intuit.com/allowHostPort: "false"
+          iks.intuit.com/allowPrivilegeEscalation: "false"
+          iks.intuit.com/allowPrivileged: "false"
+          iks.intuit.com/allowed-igs: ${allowedIG}
+          iks.intuit.com/allowedHostPaths: ""
+          iks.intuit.com/managed: "true"
+          iks.intuit.com/service-asset-alias: ${serviceAssetName}
+          iks.intuit.com/service-asset-id: ${serviceAssetId}
         labels:
-          environment: ${env}
+          iks.intuit.com/owner: iksm
+          iks.intuit.com/prune-label: ${name}
+          name: ${name}
         name: ${name}
     resources:
       - name: local_service_account1
@@ -205,11 +220,12 @@ spec:
           spec:
             hard:
               pods: "3"
-      - name: custom_service_Account
+      - name: somerole
         type: CustomResource
         customResource:
-          manifest: "{\"apiVersion\":\"v1\",\"kind\":\"ServiceAccount\",\"metadata\":{\"name\":\"${env}-sa3\",\"namespace\":\"second-namespace\"}}"
+          manifest: "{\"kind\":\"Iamrole\",\"apiVersion\":\"iammanager.keikoproj.io/v1alpha1\",\"metadata\":{\"name\":\"somerole\"},\"spec\":{\"PolicyDocument\":{\"Statement\":[{\"Effect\":\"Deny\",\"Action\":[\"ec2:*\"],\"Resource\":[\"*\"]},{\"Effect\":\"Deny\",\"Action\":[\"iam:*\"],\"Resource\":[\"*\"]}]}}}"
           GVK:
-            group: ""
-            version: "v1"
-            kind: "ServiceAccount"
+            group: "iammanager.keikoproj.io"
+            version: "v1alpha1"
+            kind: "Iamrole"
+

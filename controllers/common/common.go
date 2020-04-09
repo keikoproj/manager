@@ -56,6 +56,11 @@ func (StatusUpdatePredicate) Update(e event.UpdateEvent) bool {
 		if oldNamespaceObj.Status != newNamespaceObj.Status {
 			return false
 		}
+	} else if oldApplicationObj, ok := e.ObjectOld.(*managerv1alpha1.Application); ok {
+		newApplicationObj := e.ObjectNew.(*managerv1alpha1.Application)
+		if oldApplicationObj.Status != newApplicationObj.Status {
+			return false
+		}
 	}
 
 	return true

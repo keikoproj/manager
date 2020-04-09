@@ -53,6 +53,13 @@ type ManagedNamespaceReconciler struct {
 // +kubebuilder:rbac:groups=manager.keikoproj.io,resources=managednamespaces/status,verbs=get;update;patch
 
 func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 	ctx := context.WithValue(context.Background(), requestId, uuid.New())
 	log := log.Logger(ctx, "controllers", "namespace_controller", "Reconcile")
 	log = log.WithValues("namespace", req.NamespacedName)
@@ -113,7 +120,6 @@ func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		r.Recorder.Event(&ns, v1.EventTypeNormal, "Deleted", "Successfully deleted managed namespace")
 	}
 
-	//log.Info("Successfully reconciled managed namespace resource", "name", ns.Spec.Name)
 	return ctrl.Result{}, nil
 }
 
@@ -144,9 +150,6 @@ func (r *ManagedNamespaceReconciler) HandleNSResources(ctx context.Context, ns *
 	var ResourceFunction func() (int, error)
 	x := 0
 	ResourceFunction = func() (int, error) {
-		if len(ns.Spec.NsResources.Resources) == x {
-			return 0, nil
-		}
 		n := 0
 		Error := make(chan error)
 		Done := make(chan bool)
@@ -174,6 +177,10 @@ func (r *ManagedNamespaceReconciler) HandleNSResources(ctx context.Context, ns *
 					case common.ResourceQuotaKind:
 						log.V(1).Info("Resource Quota creation is in progress")
 						err = k8sManagedClient.CreateOrUpdateResourceQuota(ctx, res.ResourceQuota, ns.Spec.NsResources.Namespace.Name)
+
+					case common.CustomResourceKind:
+						log.V(1).Info("Custom Resource creation is in progress")
+						err = k8sManagedClient.CreateOrUpdateCustomResource(ctx, res.CustomResource, ns.Spec.NsResources.Namespace.Name)
 
 					default:
 						//TODO: handle error management
@@ -226,6 +233,17 @@ func (r *ManagedNamespaceReconciler) HandleNSResources(ctx context.Context, ns *
 			log.Error(err, "unable to create one of the resource. aborting")
 			return x, err
 		}
+
+		//Check the status Done for all the resources in the map
+		items := 0
+		for _, v := range statusMap {
+			if v.Done {
+				items++
+			}
+		}
+		if len(statusMap) == items {
+			return len(statusMap), nil
+		}
 		//recursive call if all the resources are not done
 		return ResourceFunction()
 	}
@@ -239,6 +257,11 @@ func (r *ManagedNamespaceReconciler) HandleNSResources(ctx context.Context, ns *
 		ns.Status = managerv1alpha1.ManagedNamespaceStatus{RetryCount: ns.Status.RetryCount + 1, ErrorDescription: desc, State: managerv1alpha1.Error}
 		return commonClient.UpdateStatus(ctx, ns, managerv1alpha1.Error, errRequeueTime)
 	}
+	log.Info("Successfully reconciled managed namespace resource", "name", ns.Name)
+
+	r.Recorder.Event(ns, v1.EventTypeNormal, string(managerv1alpha1.Ready), "Successfully created managed namespace")
+	ns.Status = managerv1alpha1.ManagedNamespaceStatus{RetryCount: 0, ErrorDescription: "", State: managerv1alpha1.Ready}
+	commonClient.UpdateStatus(ctx, ns, managerv1alpha1.Ready)
 
 	return ctrl.Result{}, nil
 }
@@ -253,7 +276,7 @@ func (r *ManagedNamespaceReconciler) FinalNSTemplate(ctx context.Context, ns *ma
 		return nil
 	}
 	//Lets see if we can get the namespace template
-	log.V(1).Info("Retrieving namespace template")
+	log.V(1).Info("Retrieving namespace template", "templateName", ns.Spec.TemplateName)
 	var nsTemplate managerv1alpha1.NamespaceTemplate
 	templateNamespacedName := types.NamespacedName{Namespace: "", Name: ns.Spec.TemplateName}
 	if err := r.Get(ctx, templateNamespacedName, &nsTemplate); err != nil {

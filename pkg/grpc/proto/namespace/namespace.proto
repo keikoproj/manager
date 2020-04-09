@@ -1,9 +1,8 @@
 syntax = "proto3";
 package namespace;
 
-option go_package = "pkg/grpc/proto/namespace";
-
 import "pkg/grpc/proto/namespace/template.proto";
+option go_package = "github.com/keikoproj/manager/pkg/grpc/proto/namespace";
 
 
 message Namespace {
