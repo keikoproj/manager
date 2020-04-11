@@ -1,7 +1,8 @@
 syntax = "proto3";
+// +kubebuilder:object:generate=true
 package cluster;
 
-option go_package = "pkg/proto/cluster";
+option go_package = "github.com/keikoproj/manager/pkg/grpc/proto/cluster";
 
 
 message Cluster {
@@ -35,7 +36,13 @@ message Config {
     // TODO: demonstrate an OAuth2 compatible client.
     string bearerToken = 4;
 
+    // Secret containing a BearerToken.
+    // If set, The last successfully read value takes precedence over BearerToken.
+    // +optional
+    string bearerTokenSecret = 5;
 
+    // TLSClientConfig contains settings to enable transport layer security
+    // +optional
     TLSClientConfig tlsClientConfig = 6;
 
 }
@@ -70,16 +77,3 @@ message TLSClientConfig {
 
 }
 
-message UnregisterClusterRequest {
-    string clusterName = 1;
-}
-
-message UnregisterClusterResponse {
-
-}
-
-
-service ClusterService {
-    rpc RegisterCluster(Cluster) returns (Cluster){}
-    rpc UnregisterCluster(UnregisterClusterRequest) returns (UnregisterClusterResponse){}
-}

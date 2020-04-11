@@ -36,7 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -79,7 +79,7 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := log.Logger(ctx, "controllers", "cluster_controller", "Reconcile")
 	log = log.WithValues("cluster", req.NamespacedName)
 	log.Info("Start of the request")
-	commonClient := &common2.Client{Client: r.Client, Recorder: r.Recorder}
+	commonClient := &common2.Client{Client: r.Client, Recorder: r.Recorder, K8sSelfClient: r.K8sSelfClient}
 	//Get the resource
 	var cluster managerv1alpha1.Cluster
 	if err := r.Get(ctx, req.NamespacedName, &cluster); err != nil {
@@ -113,6 +113,7 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			log.Info("New cluster resource. Adding the finalizer", "finalizer", clusterFinalizerName)
 			cluster.ObjectMeta.Finalizers = append(cluster.ObjectMeta.Finalizers, clusterFinalizerName)
 			commonClient.UpdateMeta(ctx, &cluster)
+
 		}
 		return r.HandleReconcile(ctx, req, &cluster, cfg)
 
@@ -146,7 +147,6 @@ func (r *ClusterReconciler) HandleReconcile(ctx context.Context, req ctrl.Reques
 	log.WithValues("cluster_name", cluster.Spec.Name)
 	log.Info("state of the custom resource ", "state", cluster.Status.State)
 	commonClient := &common2.Client{Client: r.Client, Recorder: r.Recorder}
-
 	state := managerv1alpha1.Warning
 
 	if cluster.Status.RetryCount > 3 {
@@ -164,8 +164,10 @@ func (r *ClusterReconciler) HandleReconcile(ctx context.Context, req ctrl.Reques
 		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state}
 		return commonClient.UpdateStatus(ctx, cluster, state, errRequeueTime)
 	}
+
 	r.Recorder.Event(cluster, v1.EventTypeNormal, string(managerv1alpha1.Ready), "Successfully validated the target cluster")
 	cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: 0, ErrorDescription: "", State: managerv1alpha1.Ready}
+
 	commonClient.UpdateStatus(ctx, cluster, managerv1alpha1.Ready)
 	log.Info("SUCCESSFUL", "version", resp)
 	return ctrl.Result{RequeueAfter: time.Duration(config.Props.ClusterValidationFrequency()) * time.Second}, nil

@@ -15,6 +15,7 @@ import (
 	"os"
 	"time"
 
+	apis "github.com/keikoproj/manager/pkg/grpc/proto/apis"
 	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 )
 
@@ -122,7 +123,7 @@ func NewClusterUnregisterCommand() *cobra.Command {
 			//managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
 			//removeRBACInManagedCluster(ctx, managedClusterClient)
 			//fmt.Printf("Clsuetr %s is removed successfully", name)
-			req := &pb.UnregisterClusterRequest{
+			req := &apis.UnregisterClusterRequest{
 				ClusterName: clusterName,
 			}
 			_, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().UnregisterCluster(ctx, req)

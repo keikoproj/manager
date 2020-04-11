@@ -160,6 +160,7 @@ type Resource struct {
 	// - Role
 	// - RoleBinding
 	// - ResourceQuota
+	// - CustomResource
 	// +kubebuilder:validation:Enum=ServiceAccount;Role;RoleBinding;ResourceQuota;CustomResource
 	Type string `protobuf:"bytes,16,opt,name=type,proto3" json:"type,omitempty"`
 	//dependsOn is an optional field and can be used to delay the creation until the referenced resource got created

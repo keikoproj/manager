@@ -19,7 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	controllercommon "github.com/keikoproj/manager/controllers/common"
 	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/internal/utils"
@@ -72,6 +72,37 @@ func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 	commonClient := &controllercommon.Client{Client: r.Client, Recorder: r.Recorder, K8sSelfClient: r.K8sSelfClient}
 
+	firstTime := false
+	// Isit being deleted?
+	if ns.ObjectMeta.DeletionTimestamp.IsZero() {
+		//Good. This is not Delete use case
+		//Lets check if this is very first time use case
+		//TODO: We probably need to add finalizer to the cluster resource for each mns
+
+		if !utils.ContainsString(ns.ObjectMeta.Finalizers, namespaceFinalizerName) {
+			log.Info("New managed namespace resource. Adding the finalizer", "finalizer", namespaceFinalizerName)
+			ns.ObjectMeta.Finalizers = append(ns.ObjectMeta.Finalizers, namespaceFinalizerName)
+			firstTime = true
+			commonClient.UpdateMeta(ctx, &ns)
+		}
+
+	} else {
+		//oh oh.. This is delete use case
+		//Lets make sure to clean up the iam role
+		if ns.Status.RetryCount != 0 {
+			ns.Status.RetryCount = ns.Status.RetryCount + 1
+		}
+		log.Info("Namespace delete request")
+
+		// Ok. Lets delete the finalizer so controller can delete the custom object
+		log.Info("Removing finalizer from managed namespace")
+		ns.ObjectMeta.Finalizers = utils.RemoveString(ns.ObjectMeta.Finalizers, namespaceFinalizerName)
+		commonClient.UpdateMeta(ctx, &ns)
+		log.Info("Successfully deleted managed namespace")
+		r.Recorder.Event(&ns, v1.EventTypeNormal, "Deleted", "Successfully deleted managed namespace")
+		return ctrl.Result{}, nil
+	}
+
 	// Final template to be processed
 	if err := r.FinalNSTemplate(ctx, &ns); err != nil {
 		log.Error(err, "unable to process namespace template", "template", ns.Spec.TemplateName)
@@ -91,36 +122,7 @@ func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return commonClient.UpdateStatus(ctx, &ns, managerv1alpha1.Error, errRequeueTime)
 	}
 
-	// Isit being deleted?
-	if ns.ObjectMeta.DeletionTimestamp.IsZero() {
-		//Good. This is not Delete use case
-		//Lets check if this is very first time use case
-		firstTime := false
-		if !utils.ContainsString(ns.ObjectMeta.Finalizers, namespaceFinalizerName) {
-			log.Info("New managed namespace resource. Adding the finalizer", "finalizer", namespaceFinalizerName)
-			ns.ObjectMeta.Finalizers = append(ns.ObjectMeta.Finalizers, namespaceFinalizerName)
-			firstTime = true
-			commonClient.UpdateMeta(ctx, &ns)
-		}
-		return r.HandleNSResources(ctx, &ns, k8sManagedClient, firstTime)
-
-	} else {
-		//oh oh.. This is delete use case
-		//Lets make sure to clean up the iam role
-		if ns.Status.RetryCount != 0 {
-			ns.Status.RetryCount = ns.Status.RetryCount + 1
-		}
-		log.Info("Namespace delete request")
-
-		// Ok. Lets delete the finalizer so controller can delete the custom object
-		log.Info("Removing finalizer from managed namespace")
-		ns.ObjectMeta.Finalizers = utils.RemoveString(ns.ObjectMeta.Finalizers, namespaceFinalizerName)
-		commonClient.UpdateMeta(ctx, &ns)
-		log.Info("Successfully deleted managed namespace")
-		r.Recorder.Event(&ns, v1.EventTypeNormal, "Deleted", "Successfully deleted managed namespace")
-	}
-
-	return ctrl.Result{}, nil
+	return r.HandleNSResources(ctx, &ns, k8sManagedClient, firstTime)
 }
 
 //ResourceStatus represents each resource status
@@ -328,7 +330,6 @@ func shouldProceed(ctx context.Context, statusMap map[string]ResourceStatus, res
 
 	if utils.BoolValue(resource.CreateOnly) && !firstTime {
 		proceed = false
-		log.V(1).Info("result", "proceed", proceed, "firstTime", firstTime)
 		return proceed
 	}
 
@@ -336,7 +337,6 @@ func shouldProceed(ctx context.Context, statusMap map[string]ResourceStatus, res
 
 		if val.Done {
 			proceed = false
-			log.V(1).Info("result", "proceed", proceed)
 			return proceed
 		}
 
@@ -345,10 +345,8 @@ func shouldProceed(ctx context.Context, statusMap map[string]ResourceStatus, res
 			proceed = false
 			if statusMap[val.DependsOn].Done {
 				proceed = true
-				log.V(1).Info("result", "proceed", proceed)
 				return proceed
 			}
-			log.V(1).Info("result", "proceed", proceed)
 			return proceed
 		}
 		if val.Error != nil {
@@ -374,7 +372,7 @@ func shouldProceed(ctx context.Context, statusMap map[string]ResourceStatus, res
 		proceed = true
 		//This means doesn't dependOn anything
 		// it can proceed
-		log.V(1).Info("First iteration", "proceed", proceed)
+		//log.V(1).Info("First iteration", "proceed", proceed)
 
 		return proceed
 	}

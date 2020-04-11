@@ -530,7 +530,7 @@ spec:
                       type:
                         description: Type represents which k8s resource is being included
                           in the resource entry Allowed values are - ServiceAccount
-                          - Role - RoleBinding - ResourceQuota
+                          - Role - RoleBinding - ResourceQuota - CustomResource
                         enum:
                         - ServiceAccount
                         - Role

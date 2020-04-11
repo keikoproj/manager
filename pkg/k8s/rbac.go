@@ -326,6 +326,8 @@ func (c *Client) CreateOrUpdateK8sSecret(ctx context.Context, secret *corev1.Sec
 //GetK8sSecret function retrieves the secrets
 func (c *Client) GetK8sSecret(ctx context.Context, name string, ns string) (*corev1.Secret, error) {
 	log := log.Logger(ctx, "pkg.k8s", "rbac", "GetK8sSecret")
+	log = log.WithValues("secretName", name, "namespace", ns)
+	log.V(1).Info("Retrieving secret")
 	secret, err := c.cl.CoreV1().Secrets(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		log.Error(err, "unable to retrieve secret", "name", name, "namespace", ns)

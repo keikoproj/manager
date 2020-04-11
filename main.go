@@ -29,7 +29,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	"github.com/keikoproj/manager/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -76,13 +76,13 @@ func main() {
 	}
 
 	log.V(1).Info("Setting up reconciler with manager")
-	k8sSelfCliennt := k8s.NewK8sSelfClientDoOrDie()
-	recorder := k8sSelfCliennt.SetUpEventHandler(context.Background())
+	k8sSelfClient := k8s.NewK8sSelfClientDoOrDie()
+	recorder := k8sSelfClient.SetUpEventHandler(context.Background())
 	if err = (&controllers.ClusterReconciler{
 		Client:        mgr.GetClient(),
 		Log:           ctrl.Log.WithName("controllers").WithName("Cluster"),
 		Scheme:        mgr.GetScheme(),
-		K8sSelfClient: k8sSelfCliennt,
+		K8sSelfClient: k8sSelfClient,
 		Recorder:      recorder,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "Cluster")
@@ -94,7 +94,7 @@ func main() {
 		Log:           ctrl.Log.WithName("controllers").WithName("ManagedNamespace"),
 		Scheme:        mgr.GetScheme(),
 		Recorder:      recorder,
-		K8sSelfClient: k8sSelfCliennt,
+		K8sSelfClient: k8sSelfClient,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ManagedNamespace")
 		os.Exit(1)
@@ -105,7 +105,7 @@ func main() {
 		Log:           ctrl.Log.WithName("controllers").WithName("Application"),
 		Scheme:        mgr.GetScheme(),
 		Recorder:      recorder,
-		K8sSelfClient: k8sSelfCliennt,
+		K8sSelfClient: k8sSelfClient,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)

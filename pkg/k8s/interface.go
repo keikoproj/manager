@@ -2,7 +2,7 @@ package k8s
 
 import (
 	"context"
-	"github.com/keikoproj/manager/api/custom/v1alpha1"
+	"github.com/keikoproj/manager/api/v1alpha1"
 	"github.com/keikoproj/manager/pkg/grpc/proto/namespace"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -34,7 +34,9 @@ type Interface interface {
 
 	CreateOrUpdateResourceQuota(ctx context.Context, quota *v1.ResourceQuota) error
 
-	CreateOrUpdateClusterCR(ctx context.Context, cr *v1alpha1.Cluster) error
+	CreateOrUpdateManagedCluster(ctx context.Context, cr *v1alpha1.Cluster, ns string) error
 	CreateOrUpdateCustomResource(ctx context.Context, cr *namespace.CustomResource, ns string) error
 	CreateOrUpdateManagedNamespace(ctx context.Context, cr *v1alpha1.ManagedNamespace, ns string) error
+
+	DeleteManagedCluster(ctx context.Context, name string, ns string) error
 }

@@ -28,6 +28,8 @@ const (
 	ResourceQuotaKind = "ResourceQuota"
 
 	CustomResourceKind = "CustomResource"
+
+	ManagerDeployedNamespace = "manager-system"
 )
 
 const (

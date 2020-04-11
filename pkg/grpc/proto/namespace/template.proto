@@ -68,6 +68,7 @@ message Resource {
     // - Role
     // - RoleBinding
     // - ResourceQuota
+    // - CustomResource
     // +kubebuilder:validation:Enum=ServiceAccount;Role;RoleBinding;ResourceQuota;CustomResource
     string type = 16;
 

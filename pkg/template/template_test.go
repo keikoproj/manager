@@ -2,7 +2,7 @@ package template_test
 
 import (
 	"context"
-	"github.com/keikoproj/manager/api/custom/v1alpha1"
+	"github.com/keikoproj/manager/api/v1alpha1"
 	"github.com/keikoproj/manager/pkg/grpc/proto/namespace"
 	"github.com/keikoproj/manager/pkg/template"
 	. "github.com/onsi/ginkgo"

@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	common2 "github.com/keikoproj/manager/controllers/common"
 	controllercommon "github.com/keikoproj/manager/controllers/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

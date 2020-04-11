@@ -2,8 +2,7 @@ package k8s
 
 import (
 	"fmt"
-	"github.com/keikoproj/manager/api/custom/v1alpha1"
-	"github.com/keikoproj/manager/pkg/k8s/customclient"
+	"github.com/keikoproj/manager/api/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -13,7 +12,6 @@ import (
 
 type Client struct {
 	cl            kubernetes.Interface
-	customCl      *customclient.Clientset
 	runtimeClient client.Client
 }
 
@@ -28,11 +26,6 @@ func NewK8sSelfClientDoOrDie() *Client {
 		config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	}
 	cl, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
-
-	custom, err := customclient.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +46,6 @@ func NewK8sSelfClientDoOrDie() *Client {
 
 	k8sCl := &Client{
 		cl:            cl,
-		customCl:      custom,
 		runtimeClient: dClient,
 	}
 	return k8sCl
@@ -83,8 +75,4 @@ func NewK8sManagedClusterClientDoOrDie(config *rest.Config) *Client {
 
 func (c *Client) ClientInterface() kubernetes.Interface {
 	return c.cl
-}
-
-func (c *Client) CustomClient() *customclient.Clientset {
-	return c.customCl
 }

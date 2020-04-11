@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

@@ -1,0 +1,37 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lets-say-its-iksm
+spec:
+  appName: lets-say-its-iksm
+  environments:
+    - name: qal
+      namespace:
+        clusterName: eks-kshama-test02-k8s
+        params:
+          name: "lets-say-its-iksm-qal"
+          env: "qal"
+          allowedIG: "nodes"
+          serviceAssetName: "Intuit.dev.deploy.iksmtest"
+          serviceAssetId: "8866479359687577727"
+        templateName: intuit-template
+    - name: e2e
+      namespace:
+        clusterName: eks-kshama-test02-k8s
+        params:
+          name: "lets-say-its-iksm-e2e"
+          env: "e2e"
+          allowedIG: "nodes"
+          serviceAssetName: "Intuit.dev.deploy.iksmtest"
+          serviceAssetId: "8866479359687577727"
+        templateName: intuit-template
+    - name: stage
+      namespace:
+        clusterName: eks-kshama-test02-k8s
+        params:
+          name: "lets-say-its-iksm-stage"
+          env: "stage"
+          allowedIG: "nodes"
+          serviceAssetName: "Intuit.dev.deploy.iksmtest"
+          serviceAssetId: "8866479359687577727"
+        templateName: intuit-template

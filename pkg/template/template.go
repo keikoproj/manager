@@ -3,7 +3,7 @@ package template
 import (
 	"context"
 	"encoding/json"
-	managerv1alpha1 "github.com/keikoproj/manager/api/custom/v1alpha1"
+	managerv1alpha1 "github.com/keikoproj/manager/api/v1alpha1"
 	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/pkg/log"
 	"github.com/keikoproj/manager/pkg/validation"
