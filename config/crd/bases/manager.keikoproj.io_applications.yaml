@@ -1,0 +1,679 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: applications.manager.keikoproj.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.state
+    description: current state of the target application
+    name: State
+    type: string
+  - JSONPath: .status.retryCount
+    description: Retry count
+    name: RetryCount
+    type: integer
+  - JSONPath: .metadata.creationTimestamp
+    description: time passed since managed application creation
+    name: Age
+    type: date
+  group: manager.keikoproj.io
+  names:
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    shortNames:
+    - app
+    singular: application
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Application is the Schema for the Application API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            appName:
+              description: Application Name Leave 5 characters to the env since namespace
+                will be constructed using ${appName}-${env}
+              maxLength: 59
+              minLength: 1
+              pattern: ^[a-z0-9-]+$
+              type: string
+            appParams:
+              additionalProperties:
+                type: string
+              description: appParams can be used to pass the values to the underlying
+                template being used If included, it tries to replace it in the template
+                mentioned with exported fields If the same entry is provided in namespace
+                params too then it will be overwritten by namespace param value
+              type: object
+            environments:
+              description: List of environments to be created for this application
+              items:
+                properties:
+                  name:
+                    description: Application environment
+                    minLength: 1
+                    pattern: ^[a-z0-9-]+$
+                    type: string
+                  namespace:
+                    description: Each environment must have one namespace
+                    properties:
+                      clusterName:
+                        description: Name of the cluster in which this namespace to
+                          be created
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9-]+$
+                        type: string
+                      nsResources:
+                        description: NamespaceResources to be created. If templateName
+                          also included in the request, make sure to use this to add
+                          "additional resources" only apart from the template DO NOT
+                          Provide namespace in the resources section if you already
+                          provided the templateName
+                        properties:
+                          namespace:
+                            description: Namespace is mandatory
+                            properties:
+                              apiVersion:
+                                description: 'APIVersion defines the versioned schema
+                                  of this representation of an object. Servers should
+                                  convert recognized schemas to the latest internal
+                                  value, and may reject unrecognized values. More
+                                  info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                                type: string
+                              kind:
+                                description: 'Kind is a string value representing
+                                  the REST resource this object represents. Servers
+                                  may infer this from the endpoint the client submits
+                                  requests to. Cannot be updated. In CamelCase. More
+                                  info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                type: string
+                              metadata:
+                                description: 'Standard object''s metadata. More info:
+                                  https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
+                                type: object
+                              spec:
+                                description: 'Spec defines the behavior of the Namespace.
+                                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status'
+                                properties:
+                                  finalizers:
+                                    description: 'Finalizers is an opaque list of
+                                      values that must be empty to permanently remove
+                                      object from storage. More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/'
+                                    items:
+                                      description: FinalizerName is the name identifying
+                                        a finalizer during namespace lifecycle.
+                                      type: string
+                                    type: array
+                                type: object
+                              status:
+                                description: 'Status describes the current status
+                                  of a Namespace. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status'
+                                properties:
+                                  conditions:
+                                    description: Represents the latest available observations
+                                      of a namespace's current state.
+                                    items:
+                                      description: NamespaceCondition contains details
+                                        about state of namespace.
+                                      properties:
+                                        lastTransitionTime:
+                                          format: date-time
+                                          type: string
+                                        message:
+                                          type: string
+                                        reason:
+                                          type: string
+                                        status:
+                                          description: Status of the condition, one
+                                            of True, False, Unknown.
+                                          type: string
+                                        type:
+                                          description: Type of namespace controller
+                                            condition.
+                                          type: string
+                                      required:
+                                      - status
+                                      - type
+                                      type: object
+                                    type: array
+                                  phase:
+                                    description: 'Phase is the current lifecycle phase
+                                      of the namespace. More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/'
+                                    type: string
+                                type: object
+                            type: object
+                          resources:
+                            description: Resources to be created and must include
+                              at least namespace
+                            items:
+                              properties:
+                                createOnly:
+                                  description: createOnly param can be used to control
+                                    whether resource to be created only once and do
+                                    not overwrite in subsequent reconcile process
+                                  enum:
+                                  - "true"
+                                  - "false"
+                                  type: string
+                                customResource:
+                                  description: CustomResource to be created for this
+                                    namespace Must include type=CustomResource and
+                                    only CustomResource will be read at the server
+                                    side and everything else will be ignored
+                                  properties:
+                                    GVK:
+                                      description: GroupVersionKind should be used
+                                        to provide the specific GVK for this custom
+                                        resource
+                                      properties:
+                                        group:
+                                          description: group -custom resource group
+                                          type: string
+                                        kind:
+                                          description: kind - custom resource kind
+                                          type: string
+                                        version:
+                                          description: version - custom resource version
+                                          type: string
+                                      type: object
+                                    manifest:
+                                      description: manifest should be used to provide
+                                        the custom resource manifest and must be in
+                                        JSON
+                                      type: string
+                                  type: object
+                                dependsOn:
+                                  description: dependsOn is an optional field and
+                                    can be used to delay the creation until the referenced
+                                    resource got created dependsOn should provide
+                                    the name of the resource it dependent on
+                                  type: string
+                                name:
+                                  type: string
+                                resourceQuota:
+                                  description: ResourceQuota to be created for this
+                                    namespace. Must include type=ResourceQuota and
+                                    only ResourceQuota will be read at the server
+                                    side and everything else will be ignored.
+                                  properties:
+                                    apiVersion:
+                                      description: 'APIVersion defines the versioned
+                                        schema of this representation of an object.
+                                        Servers should convert recognized schemas
+                                        to the latest internal value, and may reject
+                                        unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                                      type: string
+                                    kind:
+                                      description: 'Kind is a string value representing
+                                        the REST resource this object represents.
+                                        Servers may infer this from the endpoint the
+                                        client submits requests to. Cannot be updated.
+                                        In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                      type: string
+                                    metadata:
+                                      description: 'Standard object''s metadata. More
+                                        info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
+                                      type: object
+                                    spec:
+                                      description: Spec defines the desired quota.
+                                        https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+                                      properties:
+                                        hard:
+                                          additionalProperties:
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            x-kubernetes-int-or-string: true
+                                          description: 'hard is the set of desired
+                                            hard limits for each named resource. More
+                                            info: https://kubernetes.io/docs/concepts/policy/resource-quotas/'
+                                          type: object
+                                        scopeSelector:
+                                          description: scopeSelector is also a collection
+                                            of filters like scopes that must match
+                                            each object tracked by a quota but expressed
+                                            using ScopeSelectorOperator in combination
+                                            with possible values. For a resource to
+                                            match, both scopes AND scopeSelector (if
+                                            specified in spec), must be matched.
+                                          properties:
+                                            matchExpressions:
+                                              description: A list of scope selector
+                                                requirements by scope of the resources.
+                                              items:
+                                                description: A scoped-resource selector
+                                                  requirement is a selector that contains
+                                                  values, a scope name, and an operator
+                                                  that relates the scope name and
+                                                  values.
+                                                properties:
+                                                  operator:
+                                                    description: Represents a scope's
+                                                      relationship to a set of values.
+                                                      Valid operators are In, NotIn,
+                                                      Exists, DoesNotExist.
+                                                    type: string
+                                                  scopeName:
+                                                    description: The name of the scope
+                                                      that the selector applies to.
+                                                    type: string
+                                                  values:
+                                                    description: An array of string
+                                                      values. If the operator is In
+                                                      or NotIn, the values array must
+                                                      be non-empty. If the operator
+                                                      is Exists or DoesNotExist, the
+                                                      values array must be empty.
+                                                      This array is replaced during
+                                                      a strategic merge patch.
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                required:
+                                                - operator
+                                                - scopeName
+                                                type: object
+                                              type: array
+                                          type: object
+                                        scopes:
+                                          description: A collection of filters that
+                                            must match each object tracked by a quota.
+                                            If not specified, the quota matches all
+                                            objects.
+                                          items:
+                                            description: A ResourceQuotaScope defines
+                                              a filter that must match each object
+                                              tracked by a quota
+                                            type: string
+                                          type: array
+                                      type: object
+                                    status:
+                                      description: Status defines the actual enforced
+                                        quota and its current usage. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+                                      properties:
+                                        hard:
+                                          additionalProperties:
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            x-kubernetes-int-or-string: true
+                                          description: 'Hard is the set of enforced
+                                            hard limits for each named resource. More
+                                            info: https://kubernetes.io/docs/concepts/policy/resource-quotas/'
+                                          type: object
+                                        used:
+                                          additionalProperties:
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            x-kubernetes-int-or-string: true
+                                          description: Used is the current observed
+                                            total usage of the resource in the namespace.
+                                          type: object
+                                      type: object
+                                  type: object
+                                role:
+                                  description: Role to be created for this namespace.
+                                    Must include type=Role and only Role will be read
+                                    at the server side and everything else will be
+                                    ignored
+                                  properties:
+                                    apiVersion:
+                                      description: 'APIVersion defines the versioned
+                                        schema of this representation of an object.
+                                        Servers should convert recognized schemas
+                                        to the latest internal value, and may reject
+                                        unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                                      type: string
+                                    kind:
+                                      description: 'Kind is a string value representing
+                                        the REST resource this object represents.
+                                        Servers may infer this from the endpoint the
+                                        client submits requests to. Cannot be updated.
+                                        In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                      type: string
+                                    metadata:
+                                      description: Standard object's metadata.
+                                      type: object
+                                    rules:
+                                      description: Rules holds all the PolicyRules
+                                        for this Role
+                                      items:
+                                        description: PolicyRule holds information
+                                          that describes a policy rule, but does not
+                                          contain information about who the rule applies
+                                          to or which namespace the rule applies to.
+                                        properties:
+                                          apiGroups:
+                                            description: APIGroups is the name of
+                                              the APIGroup that contains the resources.  If
+                                              multiple API groups are specified, any
+                                              action requested against one of the
+                                              enumerated resources in any API group
+                                              will be allowed.
+                                            items:
+                                              type: string
+                                            type: array
+                                          nonResourceURLs:
+                                            description: NonResourceURLs is a set
+                                              of partial urls that a user should have
+                                              access to.  *s are allowed, but only
+                                              as the full, final step in the path
+                                              Since non-resource URLs are not namespaced,
+                                              this field is only applicable for ClusterRoles
+                                              referenced from a ClusterRoleBinding.
+                                              Rules can either apply to API resources
+                                              (such as "pods" or "secrets") or non-resource
+                                              URL paths (such as "/api"),  but not
+                                              both.
+                                            items:
+                                              type: string
+                                            type: array
+                                          resourceNames:
+                                            description: ResourceNames is an optional
+                                              white list of names that the rule applies
+                                              to.  An empty set means that everything
+                                              is allowed.
+                                            items:
+                                              type: string
+                                            type: array
+                                          resources:
+                                            description: Resources is a list of resources
+                                              this rule applies to.  ResourceAll represents
+                                              all resources.
+                                            items:
+                                              type: string
+                                            type: array
+                                          verbs:
+                                            description: Verbs is a list of Verbs
+                                              that apply to ALL the ResourceKinds
+                                              and AttributeRestrictions contained
+                                              in this rule.  VerbAll represents all
+                                              kinds.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - verbs
+                                        type: object
+                                      type: array
+                                  type: object
+                                roleBinding:
+                                  description: RoleBinding to bind the role and service
+                                    account for this namespace. Must include type=RoleBinding
+                                    and only RoleBinding will be read at the server
+                                    side and everything else will be ignored
+                                  properties:
+                                    apiVersion:
+                                      description: 'APIVersion defines the versioned
+                                        schema of this representation of an object.
+                                        Servers should convert recognized schemas
+                                        to the latest internal value, and may reject
+                                        unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                                      type: string
+                                    kind:
+                                      description: 'Kind is a string value representing
+                                        the REST resource this object represents.
+                                        Servers may infer this from the endpoint the
+                                        client submits requests to. Cannot be updated.
+                                        In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                      type: string
+                                    metadata:
+                                      description: Standard object's metadata.
+                                      type: object
+                                    roleRef:
+                                      description: RoleRef can reference a Role in
+                                        the current namespace or a ClusterRole in
+                                        the global namespace. If the RoleRef cannot
+                                        be resolved, the Authorizer must return an
+                                        error.
+                                      properties:
+                                        apiGroup:
+                                          description: APIGroup is the group for the
+                                            resource being referenced
+                                          type: string
+                                        kind:
+                                          description: Kind is the type of resource
+                                            being referenced
+                                          type: string
+                                        name:
+                                          description: Name is the name of resource
+                                            being referenced
+                                          type: string
+                                      required:
+                                      - apiGroup
+                                      - kind
+                                      - name
+                                      type: object
+                                    subjects:
+                                      description: Subjects holds references to the
+                                        objects the role applies to.
+                                      items:
+                                        description: Subject contains a reference
+                                          to the object or user identities a role
+                                          binding applies to.  This can either hold
+                                          a direct API object reference, or a value
+                                          for non-objects such as user and group names.
+                                        properties:
+                                          apiGroup:
+                                            description: APIGroup holds the API group
+                                              of the referenced subject. Defaults
+                                              to "" for ServiceAccount subjects. Defaults
+                                              to "rbac.authorization.k8s.io" for User
+                                              and Group subjects.
+                                            type: string
+                                          kind:
+                                            description: Kind of object being referenced.
+                                              Values defined by this API group are
+                                              "User", "Group", and "ServiceAccount".
+                                              If the Authorizer does not recognized
+                                              the kind value, the Authorizer should
+                                              report an error.
+                                            type: string
+                                          name:
+                                            description: Name of the object being
+                                              referenced.
+                                            type: string
+                                          namespace:
+                                            description: Namespace of the referenced
+                                              object.  If the object kind is non-namespace,
+                                              such as "User" or "Group", and this
+                                              value is not empty the Authorizer should
+                                              report an error.
+                                            type: string
+                                        required:
+                                        - kind
+                                        - name
+                                        type: object
+                                      type: array
+                                  required:
+                                  - roleRef
+                                  type: object
+                                serviceAccount:
+                                  description: ServiceAccount to be created for this
+                                    namespace. Must include type=ServiceAccount and
+                                    only service account will be read at the server
+                                    side and everything else will be ignored
+                                  properties:
+                                    apiVersion:
+                                      description: 'APIVersion defines the versioned
+                                        schema of this representation of an object.
+                                        Servers should convert recognized schemas
+                                        to the latest internal value, and may reject
+                                        unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                                      type: string
+                                    automountServiceAccountToken:
+                                      description: AutomountServiceAccountToken indicates
+                                        whether pods running as this service account
+                                        should have an API token automatically mounted.
+                                        Can be overridden at the pod level.
+                                      type: boolean
+                                    imagePullSecrets:
+                                      description: 'ImagePullSecrets is a list of
+                                        references to secrets in the same namespace
+                                        to use for pulling any images in pods that
+                                        reference this ServiceAccount. ImagePullSecrets
+                                        are distinct from Secrets because Secrets
+                                        can be mounted in the pod, but ImagePullSecrets
+                                        are only accessed by the kubelet. More info:
+                                        https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod'
+                                      items:
+                                        description: LocalObjectReference contains
+                                          enough information to let you locate the
+                                          referenced object inside the same namespace.
+                                        properties:
+                                          name:
+                                            description: 'Name of the referent. More
+                                              info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              TODO: Add other useful fields. apiVersion,
+                                              kind, uid?'
+                                            type: string
+                                        type: object
+                                      type: array
+                                    kind:
+                                      description: 'Kind is a string value representing
+                                        the REST resource this object represents.
+                                        Servers may infer this from the endpoint the
+                                        client submits requests to. Cannot be updated.
+                                        In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                      type: string
+                                    metadata:
+                                      description: 'Standard object''s metadata. More
+                                        info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
+                                      type: object
+                                    secrets:
+                                      description: 'Secrets is the list of secrets
+                                        allowed to be used by pods running using this
+                                        ServiceAccount. More info: https://kubernetes.io/docs/concepts/configuration/secret'
+                                      items:
+                                        description: ObjectReference contains enough
+                                          information to let you inspect or modify
+                                          the referred object.
+                                        properties:
+                                          apiVersion:
+                                            description: API version of the referent.
+                                            type: string
+                                          fieldPath:
+                                            description: 'If referring to a piece
+                                              of an object instead of an entire object,
+                                              this string should contain a valid JSON/Go
+                                              field access statement, such as desiredState.manifest.containers[2].
+                                              For example, if the object reference
+                                              is to a container within a pod, this
+                                              would take on a value like: "spec.containers{name}"
+                                              (where "name" refers to the name of
+                                              the container that triggered the event)
+                                              or if no container name is specified
+                                              "spec.containers[2]" (container with
+                                              index 2 in this pod). This syntax is
+                                              chosen only to have some well-defined
+                                              way of referencing a part of an object.
+                                              TODO: this design is not final and this
+                                              field is subject to change in the future.'
+                                            type: string
+                                          kind:
+                                            description: 'Kind of the referent. More
+                                              info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                            type: string
+                                          name:
+                                            description: 'Name of the referent. More
+                                              info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                            type: string
+                                          namespace:
+                                            description: 'Namespace of the referent.
+                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                            type: string
+                                          resourceVersion:
+                                            description: 'Specific resourceVersion
+                                              to which this reference is made, if
+                                              any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                            type: string
+                                          uid:
+                                            description: 'UID of the referent. More
+                                              info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                            type: string
+                                        type: object
+                                      type: array
+                                  type: object
+                                type:
+                                  description: Type represents which k8s resource
+                                    is being included in the resource entry Allowed
+                                    values are - ServiceAccount - Role - RoleBinding
+                                    - ResourceQuota - CustomResource
+                                  enum:
+                                  - ServiceAccount
+                                  - Role
+                                  - RoleBinding
+                                  - ResourceQuota
+                                  - CustomResource
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      params:
+                        additionalProperties:
+                          type: string
+                        description: params can be used to pass the values to the
+                          underlying template being used If included, it tries to
+                          replace it in the template mentioned with exported fields
+                        type: object
+                      templateName:
+                        description: Name of the template to be used to create this
+                          namespace This template must be already exists in the manager
+                        type: string
+                    type: object
+                type: object
+              minItems: 1
+              type: array
+          type: object
+        status:
+          description: ApplicationStatus defines the observed state of Application
+          properties:
+            errorDescription:
+              description: ErrorDescription in case of error
+              type: string
+            retryCount:
+              description: RetryCount in case of error
+              type: integer
+            state:
+              description: State of the resource
+              type: string
+          required:
+          - retryCount
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

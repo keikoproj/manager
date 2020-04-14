@@ -1,0 +1,20 @@
+syntax = "proto3";
+package apis;
+
+import "pkg/grpc/proto/cluster/cluster.proto";
+
+option go_package = "github.com/keikoproj/manager/pkg/grpc/apis";
+
+message UnregisterClusterRequest {
+    string clusterName = 1;
+}
+
+message UnregisterClusterResponse {
+
+}
+
+
+service ClusterService {
+    rpc RegisterCluster(cluster.Cluster) returns (cluster.Cluster){}
+    rpc UnregisterCluster(UnregisterClusterRequest) returns (UnregisterClusterResponse){}
+}

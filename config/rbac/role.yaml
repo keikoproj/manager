@@ -7,9 +7,24 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - delete
+- apiGroups:
   - manager.keikoproj.io
   resources:
-  - namespaces
+  - clusters
   verbs:
   - create
   - delete
@@ -21,7 +36,27 @@ rules:
 - apiGroups:
   - manager.keikoproj.io
   resources:
-  - namespaces/status
+  - clusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - manager.keikoproj.io
+  resources:
+  - managednamespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - manager.keikoproj.io
+  resources:
+  - managednamespaces/status
   verbs:
   - get
   - patch

@@ -9,13 +9,13 @@ import (
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/spf13/cobra"
 	"k8s.io/api/rbac/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os"
 	"time"
 
+	apis "github.com/keikoproj/manager/pkg/grpc/proto/apis"
 	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 )
 
@@ -60,9 +60,7 @@ func NewClusterRegisterCommand() *cobra.Command {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			conf, name := getManagedClusterKubeConfig(configContext)
-			clientSet, err := kubernetes.NewForConfig(conf)
-			utils.StopIfError(err)
-			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
+			managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(conf)
 			if serviceAccount == "" {
 				createRBACInManagedCluster(ctx, managedClusterClient)
 				serviceAccount = common.ManagerServiceAccountName
@@ -125,7 +123,7 @@ func NewClusterUnregisterCommand() *cobra.Command {
 			//managedClusterClient := k8s.NewK8sManagedClusterClientDoOrDie(clientSet)
 			//removeRBACInManagedCluster(ctx, managedClusterClient)
 			//fmt.Printf("Clsuetr %s is removed successfully", name)
-			req := &pb.UnregisterClusterRequest{
+			req := &apis.UnregisterClusterRequest{
 				ClusterName: clusterName,
 			}
 			_, err := grpc.NewConnectionOrDie().NewClusterClientOrDie().UnregisterCluster(ctx, req)
@@ -161,7 +159,7 @@ func getManagedClusterKubeConfig(contextName string) (*rest.Config, string) {
 
 func createRBACInManagedCluster(ctx context.Context, client *k8s.Client) {
 	//Create ServiceAccount
-	err := client.CreateServiceAccount(ctx, common.ManagerServiceAccountName, common.SystemNameSpace)
+	err := client.CreateServiceAccountForCluster(ctx, common.ManagerServiceAccountName, common.SystemNameSpace)
 	utils.StopIfError(err)
 
 	//Create Cluster Role

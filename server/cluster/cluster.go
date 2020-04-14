@@ -3,7 +3,10 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"github.com/keikoproj/manager/api/v1alpha1"
+	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/internal/utils"
+	apis "github.com/keikoproj/manager/pkg/grpc/proto/apis"
 	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
@@ -36,40 +39,38 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 	name := utils.SanitizeName(cl.Name)
 	log.V(1).Info("cluster name after sanitizing", "name", name)
 
-	//Create the namespace
-	ns := &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	err := c.k8sClient.CreateNamespace(ctx, ns)
-	if err != nil {
-		log.Error(err, "unable to create namespace", "name", name)
-		return nil, err
-	}
-
 	// Create the secret
 	s := make(map[string]string)
 
 	s[fmt.Sprintf("%s_%s", name, "config")] = cl.Config.BearerToken
-
+	secretName := fmt.Sprintf("%s-%s", name, "secrets")
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", name, "secrets"),
-			Namespace: name,
+			Name:      secretName,
+			Namespace: common.ManagerDeployedNamespace,
 		},
 		StringData: s,
 	}
 
-	err = c.k8sClient.CreateOrUpdateK8sSecret(ctx, secret, name)
+	err := c.k8sClient.CreateOrUpdateK8sSecret(ctx, secret, common.ManagerDeployedNamespace)
 	if err != nil {
 		log.Error(err, "unable to create/update secret in the namespace", "name", name)
 		return nil, err
 	}
 
-	//prepare cluster CR request
-	cr := utils.PrepareClusterRequestFromClusterProto(cl)
-	err = c.k8sClient.CreateOrUpdateClusterCR(ctx, cr)
+	//prepare cluster CR request i.e, just remove cl.Config.BearerToken and set cl.config.BearerTokenSecret
+	cl.Config.BearerTokenSecret = secretName
+	cl.Config.BearerToken = ""
+	cr := &v1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.SanitizeName(cl.Name),
+			Namespace: common.ManagerDeployedNamespace,
+		},
+		Spec: v1alpha1.ClusterSpec{
+			Cluster: *cl,
+		},
+	}
+	err = c.k8sClient.CreateOrUpdateManagedCluster(ctx, cr, common.ManagerDeployedNamespace)
 	if err != nil {
 		log.Error(err, "unable to create/update cluster CR in the namespace", "name", name)
 		return nil, err
@@ -79,7 +80,7 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 }
 
 //UnregisterCluster unregisters the cluster with the server
-func (c *clusterService) UnregisterCluster(ctx context.Context, req *pb.UnregisterClusterRequest) (*pb.UnregisterClusterResponse, error) {
+func (c *clusterService) UnregisterCluster(ctx context.Context, req *apis.UnregisterClusterRequest) (*apis.UnregisterClusterResponse, error) {
 	//Good thing is, we can just delete the respective namespace for that cluster and all the resources should be deleted
 	//This should send the event to cluster controller implicitly and doesn't need to delete the cluster CR
 
@@ -88,17 +89,17 @@ func (c *clusterService) UnregisterCluster(ctx context.Context, req *pb.Unregist
 	name := utils.SanitizeName(req.ClusterName)
 	log.V(1).Info("cluster name after sanitizing", "name", name)
 
-	//Delete cluster CR before deleting namespace
-	err := c.k8sClient.CustomClient().CustomV1alpha1().Clusters(name).Delete(name, &metav1.DeleteOptions{})
-	if err != nil {
-		log.Error(err, "unable to delete the cluster cr", "name", name)
-		return nil, err
+	//Delete cluster CR
+	cr := &v1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.SanitizeName(req.ClusterName),
+			Namespace: common.ManagerDeployedNamespace,
+		},
 	}
-
-	err = c.k8sClient.DeleteNamespace(ctx, name)
+	err := c.k8sClient.DeleteManagedCluster(ctx, cr, common.ManagerDeployedNamespace)
 	if err != nil {
 		log.Error(err, "unable to delete the namespace", "name", name)
 		return nil, err
 	}
-	return &pb.UnregisterClusterResponse{}, nil
+	return &apis.UnregisterClusterResponse{}, nil
 }

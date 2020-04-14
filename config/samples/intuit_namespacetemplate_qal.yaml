@@ -1,0 +1,239 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: NamespaceTemplate
+metadata:
+  name: intuit-template
+spec:
+  exportedParamName:
+    - name
+    - env
+    - allowedIG
+    - serviceAssetName
+    - serviceAssetId
+  nsResources:
+    namespace:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        annotations:
+          iam.amazonaws.com/permitted: k8s-${name}
+          k8s.intuit.com/managedBy: keiko-manager
+          iks.intuit.com/allowHostIPC: "false"
+          iks.intuit.com/allowHostNetwork: "false"
+          iks.intuit.com/allowHostPID: "false"
+          iks.intuit.com/allowHostPort: "false"
+          iks.intuit.com/allowPrivilegeEscalation: "false"
+          iks.intuit.com/allowPrivileged: "false"
+          iks.intuit.com/allowed-igs: ${allowedIG}
+          iks.intuit.com/allowedHostPaths: ""
+          iks.intuit.com/managed: "true"
+          iks.intuit.com/service-asset-alias: ${serviceAssetName}
+          iks.intuit.com/service-asset-id: ${serviceAssetId}
+        labels:
+          iks.intuit.com/owner: iksm
+          iks.intuit.com/prune-label: ${name}
+          name: ${name}
+        name: ${name}
+    resources:
+      - name: local_service_account1
+        type: ServiceAccount
+        dependsOn: local_role
+        serviceAccount:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: ${env}-sa
+            namespace: ${name}
+      - name: local_service_account2
+        type: ServiceAccount
+        serviceAccount:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: ${env}-sa2
+            namespace: ${name}
+      - name: local_service_account3
+        type: ServiceAccount
+        serviceAccount:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: ${env}-sa3
+            namespace: ${name}
+      - name: local_role
+        type: Role
+        role:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: ${env}-role
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - pods/attach
+                - pods/exec
+                - pods/portforward
+                - pods/proxy
+                - secrets
+                - services/proxy
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+            - apiGroups:
+                - ""
+              resources:
+                - serviceaccounts
+              verbs:
+                - impersonate
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+                - pods/attach
+                - pods/exec
+                - pods/portforward
+                - pods/proxy
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - watch
+                - update
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+                - endpoints
+                - persistentvolumeclaims
+                - replicationcontrollers
+                - replicationcontrollers/scale
+                - secrets
+                - serviceaccounts
+                - services
+                - services/proxy
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+            - apiGroups:
+                - apps
+              resources:
+                - daemonsets
+                - deployments
+                - deployments/rollback
+                - deployments/scale
+                - replicasets
+                - replicasets/scale
+                - statefulsets
+                - statefulsets/scale
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - autoscaling
+              resources:
+                - horizontalpodautoscalers
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+            - apiGroups:
+                - batch
+              resources:
+                - cronjobs
+                - jobs
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+            - apiGroups:
+                - extensions
+              resources:
+                - daemonsets
+                - deployments
+                - deployments/rollback
+                - deployments/scale
+                - replicasets
+                - replicasets/scale
+                - networkpolicies
+                - replicationcontrollers/scale
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - policy
+              resources:
+                - poddisruptionbudgets
+              verbs:
+                - get
+                - list
+                - create
+                - delete
+                - deletecollection
+                - patch
+                - update
+      - name: local_role_binding
+        type: RoleBinding
+        dependsOn: local_service_account1
+        roleBinding:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: ${env}-rolebinding
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: ${env}-role
+          subjects:
+            - kind: ServiceAccount
+              name: ${env}-sa
+              namespace: ${name}
+      - name: pod_count_quota
+        type: ResourceQuota
+        createOnly: "true"
+        resourceQuota:
+          apiVersion: v1
+          kind: ResourceQuota
+          metadata:
+            name: ${env}-pod-quota
+          spec:
+            hard:
+              pods: "10"
+      - name: somerole
+        type: CustomResource
+        customResource:
+          manifest: "{\"kind\":\"Iamrole\",\"apiVersion\":\"iammanager.keikoproj.io/v1alpha1\",\"metadata\":{\"name\":\"somerole\"},\"spec\":{\"PolicyDocument\":{\"Statement\":[{\"Effect\":\"Deny\",\"Action\":[\"ec2:*\"],\"Resource\":[\"*\"]},{\"Effect\":\"Deny\",\"Action\":[\"iam:*\"],\"Resource\":[\"*\"]}]}}}"
+          GVK:
+            group: "iammanager.keikoproj.io"
+            version: "v1alpha1"
+            kind: "Iamrole"
+

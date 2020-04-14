@@ -1,0 +1,14 @@
+apiVersion: manager.keikoproj.io/v1alpha1
+kind: ManagedNamespace
+metadata:
+  name: test-from-keiko-manager
+  namespace: eks-kshama-test02-k8s
+spec:
+  clusterName: eks-kshama-test02-k8s
+  params:
+    name: "test-from-keiko-manager"
+    env: "dev"
+    allowedIG: "nodes"
+    serviceAssetName: "Intuit.dev.deploy.iksmtest"
+    serviceAssetId: "8866479359687577727"
+  templateName: intuit-template

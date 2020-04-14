@@ -50,11 +50,20 @@ spec:
           type: object
         spec:
           properties:
+            cloud:
+              description: 'Type contains kubernetes cluster installation type. ex:
+                AWS, GCP'
+              type: string
             config:
               description: Config contains info to connect to the target cluster This
                 is same as config struct in https://github.com/kubernetes/client-go/blob/master/rest/config.go
                 but have to define it again here with whatever we need
               properties:
+                bearerToken:
+                  description: 'Server requires Bearer authentication. This client
+                    will not attempt to use refresh tokens for an OAuth2 flow. TODO:
+                    demonstrate an OAuth2 compatible client.'
+                  type: string
                 bearerTokenSecret:
                   description: Secret containing a BearerToken. If set, The last successfully
                     read value takes precedence over BearerToken.
@@ -112,20 +121,11 @@ spec:
                       type: string
                   type: object
                 username:
-                  description: Server requires Basic authentication
                   type: string
-              required:
-              - host
               type: object
             name:
               description: Name contains cluster name
               type: string
-            type:
-              description: 'Type contains kubernetes cluster installation type. ex:
-                AWS, GCP'
-              type: string
-          required:
-          - name
           type: object
         status:
           description: ClusterStatus defines the observed state of Cluster
@@ -133,6 +133,9 @@ spec:
             errorDescription:
               description: ErrorDescription in case of error
               type: string
+            namespaceCount:
+              description: Total Number of Namespaces in the managed cluster
+              type: integer
             retryCount:
               description: RetryCount in case of error
               type: integer
@@ -140,6 +143,7 @@ spec:
               description: State of the resource
               type: string
           required:
+          - namespaceCount
           - retryCount
           type: object
       type: object

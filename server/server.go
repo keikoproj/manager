@@ -4,7 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	pb "github.com/keikoproj/manager/pkg/grpc/proto/cluster"
+	apis "github.com/keikoproj/manager/pkg/grpc/proto/apis"
+
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
 	"github.com/keikoproj/manager/server/cluster"
@@ -48,7 +49,7 @@ func main() {
 
 	//Lets get k8s client here
 	sClient := k8s.NewK8sSelfClientDoOrDie()
-	pb.RegisterClusterServiceServer(grpcServer, cluster.New(sClient))
+	apis.RegisterClusterServiceServer(grpcServer, cluster.New(sClient))
 	log.Info("Server is up and running")
 	grpcServer.Serve(lis)
 

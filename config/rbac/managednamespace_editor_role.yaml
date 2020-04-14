@@ -1,0 +1,24 @@
+# permissions for end users to edit managednamespaces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: managednamespace-editor-role
+rules:
+- apiGroups:
+  - manager.keikoproj.io
+  resources:
+  - managednamespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - manager.keikoproj.io
+  resources:
+  - managednamespaces/status
+  verbs:
+  - get

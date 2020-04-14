@@ -12,6 +12,7 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
+    app: manager
 spec:
   selector:
     matchLabels:

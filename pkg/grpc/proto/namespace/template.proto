@@ -1,0 +1,108 @@
+syntax = "proto3";
+package namespace;
+
+import "k8s.io/api/core/v1/generated.proto";
+import "k8s.io/api/rbac/v1/generated.proto";
+//import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
+//import "k8s.io/apimachinery/pkg/runtime/generated.proto";
+//import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
+
+option go_package = "github.com/keikoproj/manager/pkg/grpc/proto/namespace";
+
+message NamespaceTemplate {
+    //exportedParamName to be exported from this template
+    //These params will be passed in namespace creation and values will be replaced
+    //If you are using params in the template, make sure to to include in the resources with ${exportedParamName}
+    //+optional
+    repeated string exportedParamName = 1;
+    //NamespaceResources consists of all the resources to be created in namespace including custom resources
+    //+required
+    NamespaceResources nsResources = 2;
+
+}
+
+message NamespaceResources {
+    //Namespace is mandatory
+    // +required
+    k8s.io.api.core.v1.Namespace namespace = 1;
+    //Resources to be created and must include at least namespace
+    // +optional
+    repeated Resource resources = 2;
+
+}
+
+message Resource {
+
+    //ServiceAccount to be created for this namespace.
+    // Must include type=ServiceAccount and only service account will be read at
+    // the server side and everything else will be ignored
+    // +optional
+    k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+    //Role to be created for this namespace.
+    // Must include type=Role and only Role will be read at
+    // the server side and everything else will be ignored
+    // +optional
+    k8s.io.api.rbac.v1.Role role = 2;
+    //RoleBinding to bind the role and service account for this namespace.
+    // Must include type=RoleBinding and only RoleBinding will be read at
+    // the server side and everything else will be ignored
+    // +optional
+    k8s.io.api.rbac.v1.RoleBinding roleBinding = 3;
+
+    //ResourceQuota to be created for this namespace.
+    // Must include type=ResourceQuota and only ResourceQuota will be read at
+    // the server side and everything else will be ignored.
+    // +optional
+    k8s.io.api.core.v1.ResourceQuota resourceQuota = 4;
+    //CustomResource to be created for this namespace
+    //Must include type=CustomResource and only CustomResource will be read at
+    // the server side and everything else will be ignored
+    // +optional
+    CustomResource customResource = 5;
+
+    // +required
+    string name = 15;
+    //Type represents which k8s resource is being included in the resource entry
+    //Allowed values are
+    // - ServiceAccount
+    // - Role
+    // - RoleBinding
+    // - ResourceQuota
+    // - CustomResource
+    // +kubebuilder:validation:Enum=ServiceAccount;Role;RoleBinding;ResourceQuota;CustomResource
+    string type = 16;
+
+    //dependsOn is an optional field and can be used to delay the creation until the referenced resource got created
+    //dependsOn should provide the name of the resource it dependent on
+    // +optional
+    string dependsOn = 17;
+
+    //createOnly param can be used to control whether resource to be created only once and do not overwrite in subsequent reconcile process
+    // +optional
+    // +kubebuilder:validation:Enum="true";"false"
+    string createOnly = 18;
+
+}
+
+
+message CustomResource {
+    //GroupVersionKind should be used to provide the specific GVK for this custom resource
+    GroupVersionKind GVK = 1;
+
+    //manifest should be used to provide the custom resource manifest and must be in JSON
+    string manifest = 2;
+
+}
+
+//GroupVersionKind can be used to provide GVK of a custom resource
+message GroupVersionKind {
+    //group -custom resource group
+    // +required
+    string group = 1;
+    //version - custom resource version
+    // +required
+    string version = 2;
+    //kind - custom resource kind
+    // +required
+    string kind = 3;
+}

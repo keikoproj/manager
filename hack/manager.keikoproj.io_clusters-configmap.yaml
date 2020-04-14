@@ -4,4 +4,4 @@ metadata:
   name: manager-v1alpha1-configmap
   namespace: manager-system
 data:
-  cluster.validation.frequency: "60"
+  cluster.validation.frequency: "600"
