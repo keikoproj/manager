@@ -72,6 +72,16 @@ func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 	commonClient := &controllercommon.Client{Client: r.Client, Recorder: r.Recorder, K8sSelfClient: r.K8sSelfClient}
 
+	//K8s client for the managed cluster
+	k8sManagedClient, err := r.ManagedClusterClient(ctx, &ns)
+	if err != nil {
+		log.Error(err, "unable to get the cluster details for the namespace")
+		desc := fmt.Sprintf("unable to get the cluster details for the namespace due to error %s", err.Error())
+		r.Recorder.Event(&ns, v1.EventTypeWarning, string(managerv1alpha1.Error), desc)
+		ns.Status = managerv1alpha1.ManagedNamespaceStatus{RetryCount: ns.Status.RetryCount + 1, ErrorDescription: desc, State: managerv1alpha1.Error}
+		return commonClient.UpdateStatus(ctx, &ns, managerv1alpha1.Error, errRequeueTime)
+	}
+
 	firstTime := false
 	// Isit being deleted?
 	if ns.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -107,16 +117,6 @@ func (r *ManagedNamespaceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	if err := r.FinalNSTemplate(ctx, &ns); err != nil {
 		log.Error(err, "unable to process namespace template", "template", ns.Spec.TemplateName)
 		desc := fmt.Sprintf("unable to process namespace template due to error %s", err.Error())
-		r.Recorder.Event(&ns, v1.EventTypeWarning, string(managerv1alpha1.Error), desc)
-		ns.Status = managerv1alpha1.ManagedNamespaceStatus{RetryCount: ns.Status.RetryCount + 1, ErrorDescription: desc, State: managerv1alpha1.Error}
-		return commonClient.UpdateStatus(ctx, &ns, managerv1alpha1.Error, errRequeueTime)
-	}
-
-	//K8s client for the managed cluster
-	k8sManagedClient, err := r.ManagedClusterClient(ctx, &ns)
-	if err != nil {
-		log.Error(err, "unable to get the cluster details for the namespace")
-		desc := fmt.Sprintf("unable to get the cluster details for the namespace due to error %s", err.Error())
 		r.Recorder.Event(&ns, v1.EventTypeWarning, string(managerv1alpha1.Error), desc)
 		ns.Status = managerv1alpha1.ManagedNamespaceStatus{RetryCount: ns.Status.RetryCount + 1, ErrorDescription: desc, State: managerv1alpha1.Error}
 		return commonClient.UpdateStatus(ctx, &ns, managerv1alpha1.Error, errRequeueTime)
@@ -306,6 +306,21 @@ func (r *ManagedNamespaceReconciler) ManagedClusterClient(ctx context.Context, n
 	}
 
 	log.V(1).Info("Cluster info", "secretName", cluster.Spec.Config.BearerTokenSecret)
+
+	// lets set the reference to cluster resource as owner (may be just do this only for the first time?)
+	// Also check if this is created by Application and add owner only if its not created by application
+	isOwnerSet := false
+	for _, owner := range ns.ObjectMeta.OwnerReferences {
+		if *owner.Controller {
+			isOwnerSet = true
+		}
+	}
+	if !isOwnerSet {
+		if err := ctrl.SetControllerReference(&cluster, ns, r.Scheme); err != nil {
+			log.Error(err, "Unable to set the controller reference")
+			return nil, err
+		}
+	}
 
 	k8sManagedClient, err := commonClient.ManagedClusterK8sClient(ctx, &cluster)
 	if err != nil {

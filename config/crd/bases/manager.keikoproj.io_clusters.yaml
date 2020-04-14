@@ -133,6 +133,9 @@ spec:
             errorDescription:
               description: ErrorDescription in case of error
               type: string
+            namespaceCount:
+              description: Total Number of Namespaces in the managed cluster
+              type: integer
             retryCount:
               description: RetryCount in case of error
               type: integer
@@ -140,6 +143,7 @@ spec:
               description: State of the resource
               type: string
           required:
+          - namespaceCount
           - retryCount
           type: object
       type: object

@@ -45,6 +45,8 @@ type ClusterStatus struct {
 	RetryCount int `json:"retryCount"`
 	//ErrorDescription in case of error
 	ErrorDescription string `json:"errorDescription,omitempty"`
+	//Total Number of Namespaces in the managed cluster
+	NamespaceCount int `json:"namespaceCount"`
 }
 
 // +kubebuilder:object:root=true

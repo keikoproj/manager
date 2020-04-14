@@ -30,6 +30,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -101,7 +103,7 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Error(err, "unable to prepare the rest config for the target cluster", "cluster", cluster.Spec.Name)
 		desc := fmt.Sprintf("unable to prepare the rest config for the target cluster due to error %s", err.Error())
 		r.Recorder.Event(&cluster, v1.EventTypeWarning, string(state), desc)
-		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state}
+		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state, NamespaceCount: cluster.Status.NamespaceCount}
 		return commonClient.UpdateStatus(ctx, &cluster, state, errRequeueTime)
 	}
 
@@ -126,7 +128,8 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Info("Cluster delete request")
 		if err := removeRBACInManagedCluster(ctx, cfg); err != nil {
 			log.Error(err, "Unable to delete the cluster")
-			cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: err.Error(), State: managerv1alpha1.Error}
+			desc := fmt.Sprintf("unable to delete the cluster due to error %s", err.Error())
+			cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state, NamespaceCount: cluster.Status.NamespaceCount}
 			commonClient.UpdateStatus(ctx, &cluster, managerv1alpha1.Error)
 			r.Recorder.Event(&cluster, v1.EventTypeWarning, string(managerv1alpha1.Error), "unable to delete the cluster due to "+err.Error())
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -161,21 +164,64 @@ func (r *ClusterReconciler) HandleReconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "unable to get the server version", "cluster", cluster.Spec.Name)
 		desc := fmt.Sprintf("Unable to get the server version due to error %s", err.Error())
 		r.Recorder.Event(cluster, v1.EventTypeWarning, string(state), desc)
-		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state}
+		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state, NamespaceCount: cluster.Status.NamespaceCount}
 		return commonClient.UpdateStatus(ctx, cluster, state, errRequeueTime)
 	}
 
+	var mnsList managerv1alpha1.ManagedNamespaceList
+	if err := r.List(ctx, &mnsList, client.InNamespace(req.Namespace), client.MatchingFields{ownerKey: req.Name}); err != nil {
+		log.Error(err, "unable to list mns for this cluster")
+		desc := fmt.Sprintf("Unable to list the mns for this cluster due to error %s", err.Error())
+		r.Recorder.Event(cluster, v1.EventTypeWarning, string(state), desc)
+		cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: cluster.Status.RetryCount + 1, ErrorDescription: desc, State: state, NamespaceCount: cluster.Status.NamespaceCount}
+		return commonClient.UpdateStatus(ctx, cluster, state, errRequeueTime)
+	}
+	log.Info("total count ", "count", len(mnsList.Items))
 	r.Recorder.Event(cluster, v1.EventTypeNormal, string(managerv1alpha1.Ready), "Successfully validated the target cluster")
-	cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: 0, ErrorDescription: "", State: managerv1alpha1.Ready}
+	// Lets add the number of namespaces part of this cluster
+
+	cluster.Status = managerv1alpha1.ClusterStatus{RetryCount: 0, ErrorDescription: "", State: managerv1alpha1.Ready, NamespaceCount: len(mnsList.Items)}
 
 	commonClient.UpdateStatus(ctx, cluster, managerv1alpha1.Ready)
 	log.Info("SUCCESSFUL", "version", resp)
 	return ctrl.Result{RequeueAfter: time.Duration(config.Props.ClusterValidationFrequency()) * time.Second}, nil
 }
 
+var (
+	ownerKey = ".spec.clusterName"
+	apiGVStr = managerv1alpha1.GroupVersion.String()
+)
+
+//EnqueueClusterOfMns will returns the cluster object for a given mns resource to be enqueued
+func (r *ClusterReconciler) EnqueueClusterOfMns(obj handler.MapObject) []ctrl.Request {
+
+	res := make([]ctrl.Request, 1)
+	res[0].Namespace = obj.Meta.GetNamespace()
+	res[0].Name = obj.Object.(*managerv1alpha1.ManagedNamespace).Spec.ClusterName
+	return res
+}
+
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	//Set up index for managed namespace lookup
+	if err := mgr.GetFieldIndexer().IndexField(&managerv1alpha1.ManagedNamespace{}, ownerKey, func(rawObj runtime.Object) []string {
+		//Okay. Lets get the mns obj and extract the owner since we are setting owner reference in mns
+		mns := rawObj.(*managerv1alpha1.ManagedNamespace)
+		clusterName := mns.Spec.ClusterName
+		if clusterName == "" {
+			return nil
+		}
+		return []string{clusterName}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&managerv1alpha1.Cluster{}).
+		Owns(&managerv1alpha1.ManagedNamespace{}).
+		Watches(&source.Kind{Type: &managerv1alpha1.ManagedNamespace{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.EnqueueClusterOfMns),
+			}).
 		WithEventFilter(common2.StatusUpdatePredicate{}).
 		Complete(r)
 }

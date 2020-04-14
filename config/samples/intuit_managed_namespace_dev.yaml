@@ -2,7 +2,7 @@ apiVersion: manager.keikoproj.io/v1alpha1
 kind: ManagedNamespace
 metadata:
   name: test-from-keiko-manager-dev
-  namespace: eks-kshama-test02-k8s
+  namespace: manager-system
 spec:
   clusterName: eks-kshama-test02-k8s
   params:

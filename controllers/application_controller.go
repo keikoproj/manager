@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/keikoproj/manager/internal/config/common"
 	"github.com/keikoproj/manager/internal/utils"
 	"github.com/keikoproj/manager/pkg/k8s"
 	"github.com/keikoproj/manager/pkg/log"
@@ -109,7 +110,7 @@ func (r *ApplicationReconciler) HandleReconcile(ctx context.Context, app *manage
 		mns := &managerv1alpha1.ManagedNamespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: utils.SanitizeName(env.Namespace.ClusterName),
+				Namespace: common.ManagerDeployedNamespace,
 			},
 			Spec: managerv1alpha1.ManagedNamespaceSpec{
 				Namespace: *env.Namespace,
@@ -127,7 +128,7 @@ func (r *ApplicationReconciler) HandleReconcile(ctx context.Context, app *manage
 		//Apply patch
 		//applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("application-controller")}
 
-		err := r.K8sSelfClient.CreateOrUpdateManagedNamespace(ctx, mns, utils.SanitizeName(env.Namespace.ClusterName))
+		err := r.K8sSelfClient.CreateOrUpdateManagedNamespace(ctx, mns, common.ManagerDeployedNamespace)
 		if err != nil {
 			log.Error(err, "Unable to create managed namespace")
 			desc := fmt.Sprintf("Unable to create managed namespace due to error %s", err.Error())

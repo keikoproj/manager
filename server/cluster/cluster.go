@@ -52,7 +52,7 @@ func (c *clusterService) RegisterCluster(ctx context.Context, cl *pb.Cluster) (*
 		StringData: s,
 	}
 
-	err := c.k8sClient.CreateOrUpdateK8sSecret(ctx, secret, name)
+	err := c.k8sClient.CreateOrUpdateK8sSecret(ctx, secret, common.ManagerDeployedNamespace)
 	if err != nil {
 		log.Error(err, "unable to create/update secret in the namespace", "name", name)
 		return nil, err
